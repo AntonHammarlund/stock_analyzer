@@ -122,12 +122,12 @@ def _merge_sources(manual: pd.DataFrame, avanza: pd.DataFrame, settings: Dict[st
     if "_manual_present" not in combined.columns:
         combined["_manual_present"] = False
     else:
-        combined["_manual_present"] = combined["_manual_present"].fillna(False)
+        combined["_manual_present"] = combined["_manual_present"].fillna(False).astype("boolean")
 
     if "_avanza_present" not in combined.columns:
         combined["_avanza_present"] = False
     else:
-        combined["_avanza_present"] = combined["_avanza_present"].fillna(False)
+        combined["_avanza_present"] = combined["_avanza_present"].fillna(False).astype("boolean")
 
     for field in PROFILE_FIELDS:
         avanza_field = f"{field}_avanza"

@@ -1,4 +1,7 @@
 from typing import Dict, List, Optional
+import os
+import smtplib
+from email.message import EmailMessage
 
 from .paths import CONFIG_DIR
 from .utils import read_json
@@ -19,6 +22,9 @@ DEFAULT_EMAIL_CONFIG = {
     "provider": "smtp",
     "smtp_host": "",
     "smtp_port": 587,
+    "smtp_starttls": True,
+    "smtp_username": "",
+    "smtp_password_env": "STOCK_ANALYZER_SMTP_PASSWORD",
 }
 
 
@@ -36,6 +42,7 @@ def load_email_config() -> Dict:
     config["to_emails"] = _normalize_recipients(config.get("to_emails", []))
     config["max_top_picks"] = int(config.get("max_top_picks", 5) or 0)
     config["smtp_port"] = int(config.get("smtp_port", 587) or 0)
+    config["smtp_starttls"] = bool(config.get("smtp_starttls", True))
     return config
 
 
@@ -116,15 +123,53 @@ def send_email(subject: str, body: str, config: Optional[Dict] = None) -> Dict:
         return {"attempted": True, "sent": False, "reason": "No recipient emails configured"}
     if not config.get("from_email"):
         return {"attempted": True, "sent": False, "reason": "No sender email configured"}
+    if config.get("provider") != "smtp":
+        return {"attempted": True, "sent": False, "reason": "Unsupported provider"}
 
-    # Placeholder: real SMTP integration will be added when credentials are provided.
-    return {
-        "attempted": True,
-        "sent": False,
-        "reason": "Email configured but SMTP not implemented",
-        "subject": subject,
-        "recipients": config.get("to_emails", []),
-    }
+    password_env = config.get("smtp_password_env", "STOCK_ANALYZER_SMTP_PASSWORD")
+    password = config.get("smtp_password") or os.getenv(password_env, "")
+    smtp_host = config.get("smtp_host", "")
+    smtp_port = int(config.get("smtp_port", 587) or 0)
+    smtp_user = config.get("smtp_username") or config.get("from_email")
+
+    if not smtp_host:
+        return {"attempted": True, "sent": False, "reason": "SMTP host not configured"}
+    if not password:
+        return {
+            "attempted": True,
+            "sent": False,
+            "reason": f"Missing SMTP password (env {password_env})",
+        }
+
+    message = EmailMessage()
+    message["Subject"] = subject
+    message["From"] = f"{config.get('from_name', '').strip()} <{config.get('from_email')}>".strip()
+    message["To"] = ", ".join(config.get("to_emails", []))
+    message.set_content(body)
+
+    try:
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+            server.ehlo()
+            if config.get("smtp_starttls", True):
+                server.starttls()
+                server.ehlo()
+            server.login(smtp_user, password)
+            server.send_message(message)
+        return {
+            "attempted": True,
+            "sent": True,
+            "reason": "Email sent",
+            "subject": subject,
+            "recipients": config.get("to_emails", []),
+        }
+    except Exception as exc:
+        return {
+            "attempted": True,
+            "sent": False,
+            "reason": f"SMTP error: {exc}",
+            "subject": subject,
+            "recipients": config.get("to_emails", []),
+        }
 
 
 def notify_report(report: Dict) -> Dict:

@@ -11,5 +11,8 @@
   "include_notes": true,
   "provider": "smtp",
   "smtp_host": "",
-  "smtp_port": 587
+  "smtp_port": 587,
+  "smtp_starttls": true,
+  "smtp_username": "",
+  "smtp_password_env": "STOCK_ANALYZER_SMTP_PASSWORD"
 }

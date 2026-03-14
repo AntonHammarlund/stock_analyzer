@@ -41,6 +41,16 @@ python scripts/run_ml_stub.py
 
 This writes `data/ml_scores.json`, which the app reads automatically.
 
+## Email notifications (optional)
+Email notifications use SMTP credentials from environment variables. Update `config/email.json` and set the
+password environment variable before running the daily job.
+
+Example (PowerShell):
+
+```powershell
+$env:STOCK_ANALYZER_SMTP_PASSWORD="your-app-password"
+```
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list
