@@ -8,6 +8,7 @@ from .paths import ensure_dirs
 from .config import load_config
 from .universe import build_universe, attach_universe_metadata
 from .data_sources.price_data import load_prices
+from .data_sources.universe_import import ImportedUniverseSource
 from .feature_store import compute_features
 from .models.quant import score_quant
 from .models.ml_proxy import load_ml_scores_with_meta
@@ -58,6 +59,7 @@ def run_daily(user_id: str | None = None) -> Dict:
     execution_host = summarize_host(select_host())
     ml_host = summarize_host(select_host("remote_ml", require_endpoint=False))
 
+    imported_universe = ImportedUniverseSource().fetch()
     universe = attach_universe_metadata(build_universe())
     if universe.empty:
         warnings.append("Universe is empty; no instruments available.")
@@ -95,6 +97,16 @@ def run_daily(user_id: str | None = None) -> Dict:
 
     combined = combined[combined["asset_type"] != "etf"]
     candidate_rows = int(len(combined))
+
+    require_import = bool(config.get("require_imported_universe", True))
+    min_imported = int(config.get("min_imported_universe_count", 0))
+    imported_count = int(len(imported_universe))
+    if require_import and imported_count < min_imported:
+        warnings.append(
+            f"Imported universe too small ({imported_count}); expected at least {min_imported} instruments."
+        )
+        combined = combined.head(0)
+        candidate_rows = 0
 
     confidence_gate = float(config.get("confidence_gate", 0.55))
     confidence_gate = min(max(confidence_gate, 0.0), 1.0)
@@ -148,10 +160,16 @@ def run_daily(user_id: str | None = None) -> Dict:
     top_picks_stocks = _build_picks(top_stocks)
     top_picks_bonds = _build_picks(top_bonds)
 
-    outlook = {
-        "daily": daily_summary(),
-        "deep": deep_summary(),
-    }
+    if require_import and imported_count < min_imported:
+        outlook = {
+            "daily": "Market summary withheld until the full imported universe is available.",
+            "deep": "Load the larger universe to enable the 1-3 week and 1-5 year trend summaries.",
+        }
+    else:
+        outlook = {
+            "daily": daily_summary(),
+            "deep": deep_summary(),
+        }
 
     active_user_id = user_id or get_active_user_id()
     portfolio = portfolio_summary(load_portfolio(active_user_id))
@@ -184,6 +202,7 @@ def run_daily(user_id: str | None = None) -> Dict:
 
     summary = {
         "universe_count": int(len(universe)),
+        "imported_universe_count": imported_count,
         "price_rows": int(len(prices)),
         "feature_rows": int(len(features)),
         "quant_rows": int(len(quant_scores)),

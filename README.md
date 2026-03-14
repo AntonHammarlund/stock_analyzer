@@ -74,6 +74,9 @@ python scripts/import_universe_csv.py --source "C:\path\to\your_universe.csv" --
 Your CSV can include these columns:
 `instrument_id`, `isin`, `name`, `asset_type`, `ticker`, `currency`, `market`, `country`, `sector`, `industry`, `manual_source`, `notes`.
 
+The pipeline will warn and pause summaries if the imported universe is below the required size
+(default `min_imported_universe_count` in `config/defaults.json`).
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list

@@ -295,11 +295,16 @@ with tab_summary:
             col3.metric("1Y Trend", format_metric(long_1y, "{:.2%}") if long_1y is not None else "n/a")
             col4.metric("5Y Trend", format_metric(long_5y, "{:.2%}") if long_5y is not None else "n/a")
 
-            st.markdown("**Top Picks Context**")
-            st.write(
-                "Top picks are selected from the same universe with ETFs excluded. "
-                "Short-term trends emphasize the last 1-3 weeks; long-term trends emphasize 1-5 years."
-            )
+    st.markdown("**Top Picks Context**")
+    st.write(
+        "Top picks are selected from the same universe with ETFs excluded. "
+        "Short-term trends emphasize the last 1-3 weeks; long-term trends emphasize 1-5 years."
+    )
+
+    summary_stats = report.get("summary", {}) if report else {}
+    imported_count = summary_stats.get("imported_universe_count")
+    if imported_count is not None:
+        st.caption(f"Imported universe size: {imported_count}")
 
 with tab_portfolio:
     st.subheader("Portfolio")
@@ -470,25 +475,37 @@ with tab_instrument:
 
                 config = load_config()
                 projection_days = int(config.get("projection_days", 90))
-                recent = price_df.tail(60)
+                recent = price_df.tail(90)
                 if len(recent) >= 5:
                     returns = recent["close"].pct_change().dropna()
                     mu = returns.mean()
                     sigma = returns.std()
                     last_price = recent["close"].iloc[-1]
                     projected = [last_price]
+                    projected_high = [last_price]
+                    projected_low = [last_price]
                     for _ in range(projection_days):
                         projected.append(projected[-1] * (1 + mu))
+                        projected_high.append(projected_high[-1] * (1 + mu + sigma))
+                        projected_low.append(projected_low[-1] * (1 + mu - sigma))
                     proj_dates = pd.date_range(
                         start=price_df["date"].iloc[-1] + pd.Timedelta(days=1),
                         periods=projection_days + 1,
                         freq="B",
                     )
                     projection_df = pd.DataFrame(
-                        {"date": proj_dates, "projection": projected}
+                        {
+                            "date": proj_dates,
+                            "projection": projected,
+                            "projection_high": projected_high,
+                            "projection_low": projected_low,
+                        }
                     )
                     fig_proj = px.line(
-                        projection_df, x="date", y="projection", title="Illustrative projection"
+                        projection_df,
+                        x="date",
+                        y=["projection", "projection_high", "projection_low"],
+                        title="Illustrative projection (range)",
                     )
                     st.plotly_chart(fig_proj, use_container_width=True)
                     st.caption(
