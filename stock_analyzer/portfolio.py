@@ -1,21 +1,29 @@
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import pandas as pd
 
 from .paths import DATA_DIR
 from .utils import read_json, write_json
+from .users import get_active_user_id
 
-PORTFOLIO_FILE = DATA_DIR / "portfolio.json"
+PORTFOLIO_DIR = DATA_DIR / "portfolios"
 
 
-def load_portfolio() -> List[Dict]:
-    payload = read_json(PORTFOLIO_FILE)
+def _portfolio_path(user_id: str) -> Path:
+    PORTFOLIO_DIR.mkdir(parents=True, exist_ok=True)
+    return PORTFOLIO_DIR / f"{user_id}.json"
+
+
+def load_portfolio(user_id: Optional[str] = None) -> List[Dict]:
+    user_id = user_id or get_active_user_id()
+    payload = read_json(_portfolio_path(user_id))
     return payload.get("holdings", [])
 
 
-def save_portfolio(holdings: List[Dict]) -> None:
-    write_json(PORTFOLIO_FILE, {"holdings": holdings})
+def save_portfolio(holdings: List[Dict], user_id: Optional[str] = None) -> None:
+    user_id = user_id or get_active_user_id()
+    write_json(_portfolio_path(user_id), {"holdings": holdings})
 
 
 def portfolio_summary(holdings: List[Dict]) -> Dict:

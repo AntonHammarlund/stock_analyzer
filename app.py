@@ -5,6 +5,13 @@ import plotly.express as px
 from stock_analyzer.pipeline import run_daily
 from stock_analyzer.reports import load_latest_report
 from stock_analyzer.portfolio import load_portfolio, save_portfolio, portfolio_summary
+from stock_analyzer.users import (
+    add_user,
+    get_active_user_id,
+    list_users,
+    set_active_user_id,
+)
+from stock_analyzer.universe import build_universe
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 
@@ -56,6 +63,16 @@ def format_metric(value, fmt="{:.2f}") -> str:
         return str(value)
 
 
+@st.cache_data(ttl=3600)
+def load_universe() -> pd.DataFrame:
+    df = build_universe()
+    if df.empty:
+        return df
+    df = df.copy()
+    df["asset_type"] = df.get("asset_type", "").fillna("").astype(str).str.lower()
+    return df
+
+
 st.title("Stock Analyzer")
 st.caption("Daily signal scan with portfolio context. Calm, quick, and decision-ready.")
 
@@ -63,6 +80,35 @@ with st.sidebar:
     st.header("Controls")
     run_now = st.button("Run Daily Refresh", use_container_width=True)
     st.caption("Fetches latest prices and recomputes scores.")
+
+    st.divider()
+    st.subheader("Account")
+    users = list_users()
+    active_user_id = get_active_user_id()
+    user_names = [user.get("name", "User") for user in users]
+    active_index = 0
+    for idx, user in enumerate(users):
+        if user.get("id") == active_user_id:
+            active_index = idx
+            break
+
+    if user_names:
+        selected_name = st.selectbox("Active user", user_names, index=active_index)
+        if selected_name != user_names[active_index]:
+            selected_user = next((u for u in users if u.get("name") == selected_name), None)
+            if selected_user:
+                set_active_user_id(selected_user.get("id"))
+                st.rerun()
+
+    with st.expander("Add user"):
+        new_user_name = st.text_input("Name", key="new_user_name")
+        if st.button("Create user", use_container_width=True):
+            created = add_user(new_user_name)
+            if created:
+                st.success(f"User '{created.get('name')}' added.")
+                st.rerun()
+            else:
+                st.warning("Enter a valid name.")
 
 if run_now:
     report = run_daily()
@@ -73,11 +119,13 @@ else:
 report = report or {}
 generated_at = report.get("generated_at")
 
-top_picks = report.get("top_picks", [])
+top_picks = report.get("top_picks_combined", report.get("top_picks", []))
+top_picks_stocks = report.get("top_picks_stocks", [])
+top_picks_bonds = report.get("top_picks_bonds", [])
 outlook = report.get("outlook", {})
 notes = report.get("notes", [])
 
-holdings = load_portfolio()
+holdings = load_portfolio(active_user_id)
 portfolio_snapshot = portfolio_summary(holdings)
 
 st.sidebar.divider()
@@ -131,59 +179,70 @@ with tab_overview:
 
 with tab_top:
     st.subheader("Top Picks")
-    top_df = pd.DataFrame(top_picks)
-    if top_df.empty:
-        st.warning("No top picks available yet.")
-    else:
-        top_df = top_df.sort_values("score", ascending=False)
 
-        with st.expander("Filters", expanded=False):
-            asset_options = sorted(top_df.get("asset_type", pd.Series(dtype=str)).dropna().unique().tolist())
-            selected_assets = asset_options
-            if asset_options:
-                selected_assets = st.multiselect("Asset types", asset_options, default=asset_options)
-            min_conf = st.slider("Minimum confidence", 0.0, 1.0, value=0.0, step=0.05)
+    def render_picks(section_title: str, picks: list[dict]) -> None:
+        st.markdown(f"**{section_title}**")
+        df = pd.DataFrame(picks)
+        if df.empty:
+            st.info("No picks available yet.")
+            return
+        df = df.sort_values("score", ascending=False)
 
-        filtered = top_df.copy()
-        if selected_assets:
-            filtered = filtered[filtered["asset_type"].isin(selected_assets)]
+        min_conf = st.slider(
+            "Minimum confidence",
+            0.0,
+            1.0,
+            value=0.0,
+            step=0.05,
+            key=f"{section_title}-conf",
+        )
+        filtered = df.copy()
         if "confidence" in filtered.columns:
             filtered = filtered[filtered["confidence"] >= min_conf]
 
-        st.caption(f"Showing {len(filtered)} of {len(top_df)} picks.")
-
+        st.caption(f"Showing {len(filtered)} of {len(df)} picks.")
         if filtered.empty:
             st.info("No picks match the current filters.")
-        else:
-            fig = px.bar(
-                filtered,
-                x="score",
-                y="name",
-                color="asset_type",
-                orientation="h",
-                hover_data=["confidence", "risk_score", "horizon"],
-            )
-            fig.update_layout(xaxis_title="Score", yaxis_title="", height=420)
-            st.plotly_chart(fig, use_container_width=True)
+            return
 
-            display_cols = [
-                col
-                for col in [
-                    "instrument_id",
-                    "name",
-                    "asset_type",
-                    "score",
-                    "risk_score",
-                    "confidence",
-                    "horizon",
-                ]
-                if col in filtered.columns
+        fig = px.bar(
+            filtered,
+            x="score",
+            y="name",
+            color="asset_type",
+            orientation="h",
+            hover_data=["confidence", "risk_score", "horizon"],
+        )
+        fig.update_layout(xaxis_title="Score", yaxis_title="", height=420)
+        st.plotly_chart(fig, use_container_width=True)
+
+        display_cols = [
+            col
+            for col in [
+                "instrument_id",
+                "name",
+                "asset_type",
+                "score",
+                "risk_score",
+                "confidence",
+                "horizon",
             ]
-            st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
+            if col in filtered.columns
+        ]
+        st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
 
-            if "rationale" in filtered.columns:
-                with st.expander("Rationales", expanded=False):
-                    st.dataframe(filtered[["name", "rationale"]], use_container_width=True, hide_index=True)
+        if "rationale" in filtered.columns:
+            with st.expander("Rationales", expanded=False):
+                st.dataframe(filtered[["name", "rationale"]], use_container_width=True, hide_index=True)
+
+    sub_combined, sub_stocks, sub_bonds = st.tabs(["Combined", "Stocks", "Bonds"])
+
+    with sub_combined:
+        render_picks("Combined Picks (No ETFs)", top_picks)
+    with sub_stocks:
+        render_picks("Stock Picks", top_picks_stocks)
+    with sub_bonds:
+        render_picks("Bond Picks", top_picks_bonds)
 
 with tab_outlook:
     st.subheader("Market Outlook")
@@ -244,26 +303,71 @@ with tab_portfolio:
         )
 
     st.markdown("### Add Holding")
-    with st.form("add_holding"):
-        instrument_id = st.text_input("Instrument ID")
-        name = st.text_input("Name")
-        weight = st.number_input(
-            "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
-        )
-        submitted = st.form_submit_button("Add")
-        if submitted:
-            if not instrument_id or not name:
-                st.warning("Instrument ID and name are required.")
-            else:
+    add_mode = st.radio("Add method", ["Search", "Manual"], horizontal=True)
+
+    if add_mode == "Search":
+        universe_df = load_universe()
+        if not universe_df.empty:
+            universe_df = universe_df[universe_df["asset_type"] != "etf"]
+
+        search = st.text_input("Search by name, ticker, ISIN, or ID")
+        candidates = universe_df.copy()
+        if search and not candidates.empty:
+            search_lower = search.strip().lower()
+            mask = (
+                candidates.get("name", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                | candidates.get("ticker", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                | candidates.get("isin", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                | candidates.get("instrument_id", "").astype(str).str.lower().str.contains(search_lower, na=False)
+            )
+            candidates = candidates[mask]
+
+        candidates = candidates.head(50) if not candidates.empty else candidates
+
+        if candidates.empty:
+            st.info("No instruments matched your search.")
+        else:
+            options = [
+                f"{row.get('name', 'Unknown')} ({row.get('instrument_id')})"
+                for _, row in candidates.iterrows()
+            ]
+            selection = st.selectbox("Select instrument", options)
+            weight = st.number_input(
+                "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
+            )
+            if st.button("Add selected"):
+                idx = options.index(selection)
+                row = candidates.iloc[idx]
                 holding = {
-                    "instrument_id": instrument_id.strip(),
-                    "name": name.strip(),
+                    "instrument_id": str(row.get("instrument_id")).strip(),
+                    "name": str(row.get("name")).strip(),
                     "weight": float(weight),
                 }
                 holdings.append(holding)
-                save_portfolio(holdings)
+                save_portfolio(holdings, active_user_id)
                 st.success("Holding added.")
                 st.rerun()
+    else:
+        with st.form("add_holding_manual"):
+            instrument_id = st.text_input("Instrument ID")
+            name = st.text_input("Name")
+            weight = st.number_input(
+                "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
+            )
+            submitted = st.form_submit_button("Add")
+            if submitted:
+                if not instrument_id or not name:
+                    st.warning("Instrument ID and name are required.")
+                else:
+                    holding = {
+                        "instrument_id": instrument_id.strip(),
+                        "name": name.strip(),
+                        "weight": float(weight),
+                    }
+                    holdings.append(holding)
+                    save_portfolio(holdings, active_user_id)
+                    st.success("Holding added.")
+                    st.rerun()
 
     if holdings:
         st.markdown("### Remove Holding")
@@ -274,6 +378,6 @@ with tab_portfolio:
         if st.button("Remove"):
             index = options.index(to_remove)
             holdings.pop(index)
-            save_portfolio(holdings)
+            save_portfolio(holdings, active_user_id)
             st.success("Holding removed.")
             st.rerun()

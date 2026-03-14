@@ -60,6 +60,10 @@ Run the launcher menu:
 
 You can create a desktop shortcut to `launch_menu.cmd` if you want a one-click menu.
 
+## Accounts (local profiles)
+This app supports lightweight local profiles (no passwords). You can add users from the sidebar and switch the active user.
+Each user has a separate portfolio file under `data/portfolios/`.
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list

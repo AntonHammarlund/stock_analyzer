@@ -13,6 +13,7 @@ from .models.quant import score_quant
 from .models.ml_proxy import load_ml_scores_with_meta
 from .scoring import combine_scores
 from .portfolio import load_portfolio, portfolio_summary
+from .users import get_active_user_id
 from .outlook import daily_summary, deep_summary
 from .reports import build_report, write_latest_report
 from .host_manager import select_host, summarize_host
@@ -39,7 +40,13 @@ def _safe_float(value: object, default: float = 0.0) -> float:
         return default
 
 
-def run_daily() -> Dict:
+def _filter_assets(df: pd.DataFrame, asset_types: list[str]) -> pd.DataFrame:
+    if df.empty or "asset_type" not in df.columns:
+        return df
+    return df[df["asset_type"].isin(asset_types)]
+
+
+def run_daily(user_id: str | None = None) -> Dict:
     ensure_dirs()
     config = load_config()
     notes: List[str] = []
@@ -82,6 +89,11 @@ def run_daily() -> Dict:
     combined = combined.merge(universe, on="instrument_id", how="left")
     if combined.empty:
         warnings.append("No combined scores produced; report will be empty.")
+
+    if "asset_type" in combined.columns:
+        combined["asset_type"] = combined["asset_type"].fillna("").astype(str).str.lower()
+
+    combined = combined[combined["asset_type"] != "etf"]
     candidate_rows = int(len(combined))
 
     confidence_gate = float(config.get("confidence_gate", 0.55))
@@ -94,40 +106,55 @@ def run_daily() -> Dict:
 
     combined = eligible.sort_values("final_score", ascending=False) if not eligible.empty else eligible
     top_n = max(0, int(config.get("top_picks_count", 10)))
+    top_stocks_n = max(0, int(config.get("top_stocks_count", top_n)))
+    top_bonds_n = max(0, int(config.get("top_bonds_count", top_n)))
+
+    stocks_df = _filter_assets(combined, ["stock", "equity"])
+    bonds_df = _filter_assets(combined, ["bond", "fixed_income", "bond_fund"])
+
     top = combined.head(top_n)
+    top_stocks = stocks_df.head(top_stocks_n)
+    top_bonds = bonds_df.head(top_bonds_n)
     if candidate_rows > 0 and combined.empty and top_n > 0:
         warnings.append("No candidates passed the confidence gate.")
 
-    top_picks = []
-    for _, row in top.iterrows():
-        risk_score = _safe_float(row.get("risk_score"), 0.0)
-        momentum_score = _safe_float(row.get("momentum_score"), 0.0)
-        quant_score = _safe_float(row.get("quant_score"), 0.0)
-        ml_score = _safe_float(row.get("ml_score"), 0.5)
-        confidence = _safe_float(row.get("confidence"), 0.0)
-        final_score = _safe_float(row.get("final_score"), 0.0)
-        top_picks.append(
-            {
-                "instrument_id": row["instrument_id"],
-                "name": row.get("name", "Unknown"),
-                "asset_type": row.get("asset_type", "unknown"),
-                "score": round(final_score, 4),
-                "quant_score": round(quant_score, 4),
-                "ml_score": round(ml_score, 4),
-                "risk_score": round(risk_score, 4),
-                "momentum_score": round(momentum_score, 4),
-                "confidence": round(confidence, 4),
-                "horizon": _estimate_horizon(risk_score, momentum_score),
-                "rationale": "Balanced momentum and risk profile.",
-            }
-        )
+    def _build_picks(df: pd.DataFrame) -> list[dict]:
+        picks: list[dict] = []
+        for _, row in df.iterrows():
+            risk_score = _safe_float(row.get("risk_score"), 0.0)
+            momentum_score = _safe_float(row.get("momentum_score"), 0.0)
+            quant_score = _safe_float(row.get("quant_score"), 0.0)
+            ml_score = _safe_float(row.get("ml_score"), 0.5)
+            confidence = _safe_float(row.get("confidence"), 0.0)
+            final_score = _safe_float(row.get("final_score"), 0.0)
+            picks.append(
+                {
+                    "instrument_id": row["instrument_id"],
+                    "name": row.get("name", "Unknown"),
+                    "asset_type": row.get("asset_type", "unknown"),
+                    "score": round(final_score, 4),
+                    "quant_score": round(quant_score, 4),
+                    "ml_score": round(ml_score, 4),
+                    "risk_score": round(risk_score, 4),
+                    "momentum_score": round(momentum_score, 4),
+                    "confidence": round(confidence, 4),
+                    "horizon": _estimate_horizon(risk_score, momentum_score),
+                    "rationale": "Balanced momentum and risk profile.",
+                }
+            )
+        return picks
+
+    top_picks = _build_picks(top)
+    top_picks_stocks = _build_picks(top_stocks)
+    top_picks_bonds = _build_picks(top_bonds)
 
     outlook = {
         "daily": daily_summary(),
         "deep": deep_summary(),
     }
 
-    portfolio = portfolio_summary(load_portfolio())
+    active_user_id = user_id or get_active_user_id()
+    portfolio = portfolio_summary(load_portfolio(active_user_id))
 
     status = "success" if not warnings else "degraded"
     finished_at = utc_now_iso()
@@ -165,6 +192,8 @@ def run_daily() -> Dict:
         "filtered_out": filtered_out,
         "top_picks_target": top_n,
         "top_picks_count": int(len(top_picks)),
+        "top_stocks_count": int(len(top_picks_stocks)),
+        "top_bonds_count": int(len(top_picks_bonds)),
         "confidence_gate": confidence_gate,
     }
 
@@ -178,6 +207,10 @@ def run_daily() -> Dict:
         inputs=inputs,
         warnings=warnings,
     )
+    report["top_picks_combined"] = top_picks
+    report["top_picks_stocks"] = top_picks_stocks
+    report["top_picks_bonds"] = top_picks_bonds
+    report["active_user_id"] = active_user_id
     notification = notify_report(report)
     if notification.get("attempted"):
         reason = notification.get("reason", "Notification attempted.")

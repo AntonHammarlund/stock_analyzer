@@ -9,6 +9,8 @@
   "deep_summary_hour": 18,
   "regime_shift_threshold": 0.7,
   "top_picks_count": 10,
+  "top_stocks_count": 10,
+  "top_bonds_count": 10,
   "min_holding_months": 3,
   "max_holding_years": 10,
   "stability_penalty": 0.15,

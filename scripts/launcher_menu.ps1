@@ -50,6 +50,20 @@ function Show-Menu {
     Write-Host ""
 }
 
+function Get-ActiveUserId {
+    $usersFile = Join-Path $projectRoot "data\users.json"
+    if (-not (Test-Path $usersFile)) {
+        return "default"
+    }
+    try {
+        $payload = Get-Content -Path $usersFile -Raw | ConvertFrom-Json
+        if ($payload.active_user_id) {
+            return $payload.active_user_id
+        }
+    } catch {}
+    return "default"
+}
+
 $python = Resolve-Python
 if (-not $python) {
     Write-Host "Python not found. Set STOCK_ANALYZER_PYTHON to your python.exe path." -ForegroundColor Yellow
@@ -86,11 +100,12 @@ while ($true) {
             }
         }
         "5" {
-            $portfolio = Join-Path $projectRoot "data\portfolio.json"
+            $userId = Get-ActiveUserId
+            $portfolio = Join-Path $projectRoot ("data\portfolios\" + $userId + ".json")
             if (Test-Path $portfolio) {
                 Start-Process $portfolio
             } else {
-                Write-Host "No portfolio file yet. Add holdings in the app first." -ForegroundColor Yellow
+                Write-Host "No portfolio file for the active user yet. Add holdings in the app first." -ForegroundColor Yellow
                 Read-Host "Press Enter to continue"
             }
         }
