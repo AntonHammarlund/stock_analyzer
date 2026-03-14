@@ -63,6 +63,8 @@ class ImportedUniverseSource:
 
     def fetch(self) -> pd.DataFrame:
         if not self.path.exists():
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            pd.DataFrame(columns=OUTPUT_COLUMNS).to_csv(self.path, index=False)
             return _empty()
 
         df = pd.read_csv(self.path, dtype=str)

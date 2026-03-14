@@ -1,0 +1,6 @@
+{
+  "provider": "none",
+  "daily_required": true,
+  "expected_freshness_days": 1,
+  "notes": "Configure a licensed data provider for daily prices and thousands of instruments."
+}

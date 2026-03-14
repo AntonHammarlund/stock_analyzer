@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 from stock_analyzer.pipeline import run_daily
 from stock_analyzer.reports import load_latest_report
@@ -13,6 +14,7 @@ from stock_analyzer.users import (
 )
 from stock_analyzer.universe import build_universe
 from stock_analyzer.data_sources.price_data import load_prices
+from stock_analyzer.data_sources.universe_import import ImportedUniverseSource
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 
@@ -67,6 +69,16 @@ def format_metric(value, fmt="{:.2f}") -> str:
 @st.cache_data(ttl=3600)
 def load_universe() -> pd.DataFrame:
     df = build_universe()
+    if df.empty:
+        return df
+    df = df.copy()
+    df["asset_type"] = df.get("asset_type", "").fillna("").astype(str).str.lower()
+    return df
+
+
+@st.cache_data(ttl=3600)
+def load_imported_universe() -> pd.DataFrame:
+    df = ImportedUniverseSource().fetch()
     if df.empty:
         return df
     df = df.copy()
@@ -259,10 +271,45 @@ with tab_outlook:
 with tab_summary:
     st.subheader("Market Summary")
     universe_df = load_universe()
+    imported_df = load_imported_universe()
     if universe_df.empty:
         st.info("Universe is empty; import instruments to see summary.")
     else:
         prices_df = load_prices(universe_df)
+        st.markdown("**Universe Status**")
+
+        total_universe = len(universe_df)
+        imported_count = len(imported_df)
+        summary_stats = report.get("summary", {}) if report else {}
+        data_ready = summary_stats.get("data_ready")
+        price_age = summary_stats.get("price_age_days")
+
+        coverage_pct = 0.0
+        median_history = None
+        if not prices_df.empty and "instrument_id" in prices_df.columns:
+            counts = prices_df.groupby("instrument_id").size()
+            coverage_pct = float(counts.size / total_universe) if total_universe else 0.0
+            median_history = float(counts.median()) if not counts.empty else None
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Universe Size", total_universe)
+        col2.metric("Imported Size", imported_count)
+        col3.metric("Price Coverage", format_metric(coverage_pct, "{:.0%}"))
+        col4.metric("Price Age (days)", price_age if price_age is not None else "n/a")
+
+        if data_ready is False:
+            st.warning("Data readiness checks failed. Load the full universe and daily prices to enable summaries.")
+
+        if not universe_df.empty and "asset_type" in universe_df.columns:
+            type_counts = (
+                universe_df["asset_type"].fillna("unknown").astype(str).str.lower().value_counts().reset_index()
+            )
+            type_counts.columns = ["asset_type", "count"]
+            fig_types = px.bar(type_counts, x="asset_type", y="count", title="Asset type distribution")
+            st.plotly_chart(fig_types, use_container_width=True)
+
+        if median_history is not None:
+            st.caption(f"Median history length: {int(median_history)} trading days.")
         if prices_df.empty:
             st.info("No price data available yet.")
         else:
@@ -501,12 +548,38 @@ with tab_instrument:
                             "projection_low": projected_low,
                         }
                     )
-                    fig_proj = px.line(
-                        projection_df,
-                        x="date",
-                        y=["projection", "projection_high", "projection_low"],
-                        title="Illustrative projection (range)",
+                    fig_proj = go.Figure()
+                    fig_proj.add_trace(
+                        go.Scatter(
+                            x=projection_df["date"],
+                            y=projection_df["projection_low"],
+                            line=dict(color="rgba(184, 205, 198, 0.0)"),
+                            showlegend=False,
+                            hoverinfo="skip",
+                            name="Lower bound",
+                        )
                     )
+                    fig_proj.add_trace(
+                        go.Scatter(
+                            x=projection_df["date"],
+                            y=projection_df["projection_high"],
+                            fill="tonexty",
+                            fillcolor="rgba(184, 205, 198, 0.35)",
+                            line=dict(color="rgba(184, 205, 198, 0.0)"),
+                            showlegend=False,
+                            hoverinfo="skip",
+                            name="Upper bound",
+                        )
+                    )
+                    fig_proj.add_trace(
+                        go.Scatter(
+                            x=projection_df["date"],
+                            y=projection_df["projection"],
+                            line=dict(color="#4f6b5e", width=2),
+                            name="Projection",
+                        )
+                    )
+                    fig_proj.update_layout(title="Illustrative projection (range)")
                     st.plotly_chart(fig_proj, use_container_width=True)
                     st.caption(
                         "Projection is illustrative and based on recent average returns; not investment advice."

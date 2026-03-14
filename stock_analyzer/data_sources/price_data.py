@@ -29,6 +29,7 @@ def _generate_sample_prices(
 ) -> pd.DataFrame:
     config = load_config()
     history_days = int(config.get("price_history_days", 365))
+    max_sample = int(config.get("max_sample_instruments", 500))
     np.random.seed(42)
     rows = []
     end = datetime.utcnow().date()
@@ -39,6 +40,9 @@ def _generate_sample_prices(
         instruments = universe[universe["instrument_id"].isin(list(instrument_ids))]
     else:
         instruments = universe
+
+    if instrument_ids is None and len(instruments) > max_sample:
+        return pd.DataFrame(columns=["instrument_id", "date", "close"])
 
     for _, row in instruments.iterrows():
         price = 100 + np.random.rand() * 20

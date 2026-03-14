@@ -3,6 +3,7 @@ from typing import Dict, List
 from uuid import uuid4
 
 import pandas as pd
+from datetime import datetime, timezone
 
 from .paths import ensure_dirs
 from .config import load_config
@@ -100,13 +101,16 @@ def run_daily(user_id: str | None = None) -> Dict:
 
     require_import = bool(config.get("require_imported_universe", True))
     min_imported = int(config.get("min_imported_universe_count", 0))
+    max_price_age = int(config.get("max_price_age_days", 1))
     imported_count = int(len(imported_universe))
+    data_ready = True
     if require_import and imported_count < min_imported:
         warnings.append(
             f"Imported universe too small ({imported_count}); expected at least {min_imported} instruments."
         )
         combined = combined.head(0)
         candidate_rows = 0
+        data_ready = False
 
     confidence_gate = float(config.get("confidence_gate", 0.55))
     confidence_gate = min(max(confidence_gate, 0.0), 1.0)
@@ -160,17 +164,6 @@ def run_daily(user_id: str | None = None) -> Dict:
     top_picks_stocks = _build_picks(top_stocks)
     top_picks_bonds = _build_picks(top_bonds)
 
-    if require_import and imported_count < min_imported:
-        outlook = {
-            "daily": "Market summary withheld until the full imported universe is available.",
-            "deep": "Load the larger universe to enable the 1-3 week and 1-5 year trend summaries.",
-        }
-    else:
-        outlook = {
-            "daily": daily_summary(),
-            "deep": deep_summary(),
-        }
-
     active_user_id = user_id or get_active_user_id()
     portfolio = portfolio_summary(load_portfolio(active_user_id))
 
@@ -194,16 +187,52 @@ def run_daily(user_id: str | None = None) -> Dict:
     if not prices.empty and "date" in prices.columns:
         prices_as_of = prices["date"].max()
 
+    price_age_days = None
+    if prices_as_of:
+        try:
+            prices_date = pd.to_datetime(prices_as_of).date()
+            price_age_days = (datetime.now(timezone.utc).date() - prices_date).days
+        except Exception:
+            price_age_days = None
+
+    if require_import and price_age_days is not None and price_age_days > max_price_age:
+        warnings.append(
+            f"Price data is stale ({price_age_days} days old); expected <= {max_price_age}."
+        )
+        combined = combined.head(0)
+        candidate_rows = 0
+        data_ready = False
+
+    if require_import and not data_ready:
+        if imported_count < min_imported:
+            outlook = {
+                "daily": "Market summary withheld until the full imported universe is available.",
+                "deep": "Load the larger universe to enable the 1-3 week and 1-5 year trend summaries.",
+            }
+        else:
+            outlook = {
+                "daily": "Market summary withheld because price data is stale.",
+                "deep": "Refresh daily prices from your data provider to enable trend summaries.",
+            }
+    else:
+        outlook = {
+            "daily": daily_summary(),
+            "deep": deep_summary(),
+        }
+
     inputs = {
         "universe_as_of": universe_as_of,
         "prices_as_of": prices_as_of,
+        "price_age_days": price_age_days,
         "ml": ml_meta,
     }
 
     summary = {
         "universe_count": int(len(universe)),
         "imported_universe_count": imported_count,
+        "data_ready": data_ready,
         "price_rows": int(len(prices)),
+        "price_age_days": price_age_days,
         "feature_rows": int(len(features)),
         "quant_rows": int(len(quant_scores)),
         "ml_rows": int(len(ml_scores)),

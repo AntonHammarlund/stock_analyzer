@@ -77,6 +77,13 @@ Your CSV can include these columns:
 The pipeline will warn and pause summaries if the imported universe is below the required size
 (default `min_imported_universe_count` in `config/defaults.json`).
 
+Daily summaries also require fresh price data. If the latest price date is older than
+`max_price_age_days`, summaries are withheld until the data is refreshed.
+
+## Data provider configuration
+Set your data provider in `config/data_provider.json`. The project expects a licensed, daily-updated
+source for Swedish stocks/bonds and a large global universe.
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list
