@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+
+# Data/cache
+/data/cache.sqlite
+/data/*.parquet
+/data/*.csv
+/reports/*.json
+/reports/*.html
+
+# Streamlit
+.streamlit/
+
+# OS
+.DS_Store
+Thumbs.db

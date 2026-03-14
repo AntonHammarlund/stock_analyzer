@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "library_freshness_days": 90,
+  "data_freshness_days": 1,
+  "library_last_release_date": "",
+  "notes": "Opt-in only. Populate library_last_release_date (YYYY-MM-DD) after verifying the Avanza library freshness."
+}

@@ -1,0 +1,18 @@
+{
+  "fallback_mode": "automatic",
+  "hosts": [
+    {
+      "id": "local",
+      "type": "local",
+      "enabled": true,
+      "priority": 1
+    },
+    {
+      "id": "remote_ml",
+      "type": "remote_ml",
+      "enabled": false,
+      "priority": 2,
+      "endpoint": ""
+    }
+  ]
+}
