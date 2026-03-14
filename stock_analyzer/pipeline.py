@@ -16,6 +16,7 @@ from .portfolio import load_portfolio, portfolio_summary
 from .outlook import daily_summary, deep_summary
 from .reports import build_report, write_latest_report
 from .host_manager import select_host, summarize_host
+from .notifications import notify_report
 from .utils import utc_now_iso
 
 
@@ -177,5 +178,9 @@ def run_daily() -> Dict:
         inputs=inputs,
         warnings=warnings,
     )
+    notification = notify_report(report)
+    if notification.get("attempted"):
+        reason = notification.get("reason", "Notification attempted.")
+        report["notes"].append(f"Email notification: {reason}")
     write_latest_report(report)
     return report
