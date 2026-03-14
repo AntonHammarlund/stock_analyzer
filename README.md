@@ -51,6 +51,15 @@ Example (PowerShell):
 $env:STOCK_ANALYZER_SMTP_PASSWORD="your-app-password"
 ```
 
+## Launcher menu (desktop-friendly)
+Run the launcher menu:
+
+```powershell
+.\launch_menu.cmd
+```
+
+You can create a desktop shortcut to `launch_menu.cmd` if you want a one-click menu.
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list
