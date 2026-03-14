@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 import requests
 
-from ..paths import DATA_DIR, CONFIG_DIR
+from ..paths import DATA_DIR
 from ..utils import read_json, write_json, utc_now_iso
+from ..host_manager import select_host, summarize_host
 
 ML_CACHE = DATA_DIR / "ml_scores.json"
-HOSTS_FILE = CONFIG_DIR / "hosts.json"
 CACHE_TTL_HOURS = 24
 DEFAULT_ML_SCORE = 0.5
 DEFAULT_ML_CONFIDENCE = 0.5
@@ -62,12 +62,15 @@ def _clip_unit(value: float, default: float) -> float:
     return min(1.0, max(0.0, value))
 
 
-def _get_remote_endpoint() -> str:
-    hosts = read_json(HOSTS_FILE)
-    for host in hosts.get("hosts", []):
-        if host.get("type") == "remote_ml" and host.get("enabled"):
-            return host.get("endpoint", "")
-    return ""
+def _resolve_ml_host() -> Dict[str, Any]:
+    return select_host("remote_ml", require_endpoint=False)
+
+
+def _get_remote_endpoint(host: Dict[str, Any] | None = None) -> str:
+    host = host or _resolve_ml_host()
+    if host.get("type") != "remote_ml":
+        return ""
+    return host.get("endpoint", "")
 
 
 def _normalize_payload(raw: Any, endpoint: str) -> Dict[str, Any]:
@@ -95,36 +98,64 @@ def _normalize_payload(raw: Any, endpoint: str) -> Dict[str, Any]:
     }
 
 
-def fetch_remote_ml_scores() -> Dict[str, Any]:
-    endpoint = _get_remote_endpoint()
+def _fetch_remote_ml_payload() -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    host = _resolve_ml_host()
+    meta: Dict[str, Any] = {
+        "source": "remote",
+        "status": "ok",
+        "host": summarize_host(host),
+    }
+    endpoint = _get_remote_endpoint(host)
     if not endpoint:
-        return {}
+        meta["status"] = "no-endpoint"
+        return {}, meta
     try:
         response = requests.get(endpoint, timeout=REQUEST_TIMEOUT)
         if response.status_code != 200:
-            return {}
+            meta["status"] = f"http-{response.status_code}"
+            return {}, meta
         raw = response.json()
     except Exception:
-        return {}
+        meta["status"] = "error"
+        return {}, meta
 
     payload = _normalize_payload(raw, endpoint)
     write_json(ML_CACHE, payload)
+    return payload, meta
+
+
+def fetch_remote_ml_scores() -> Dict[str, Any]:
+    payload, _ = _fetch_remote_ml_payload()
     return payload
 
 
-def load_ml_scores() -> pd.DataFrame:
+def load_ml_scores_with_meta() -> Tuple[pd.DataFrame, Dict[str, Any]]:
     cached_payload: Any = read_json(ML_CACHE) if ML_CACHE.exists() else {}
     if _is_cache_fresh(cached_payload):
-        return _payload_to_df(cached_payload)
+        df = _payload_to_df(cached_payload)
+        meta = {"source": "cache", "status": "fresh", "count": len(df)}
+        return df, meta
 
-    remote_payload = fetch_remote_ml_scores()
+    remote_payload, remote_meta = _fetch_remote_ml_payload()
     if remote_payload:
-        return _payload_to_df(remote_payload)
+        df = _payload_to_df(remote_payload)
+        remote_meta = dict(remote_meta)
+        remote_meta["count"] = len(df)
+        return df, remote_meta
 
     if cached_payload:
-        return _payload_to_df(cached_payload)
+        df = _payload_to_df(cached_payload)
+        meta = {"source": "cache", "status": "stale", "count": len(df)}
+        return df, meta
 
-    return _payload_to_df({})
+    meta = dict(remote_meta)
+    meta["count"] = 0
+    return _payload_to_df({}), meta
+
+
+def load_ml_scores() -> pd.DataFrame:
+    df, _ = load_ml_scores_with_meta()
+    return df
 
 
 def _payload_to_df(payload: Any) -> pd.DataFrame:

@@ -1,0 +1,8 @@
+{
+  "availability_ttl_days": 45,
+  "default_asset_type": "stock",
+  "default_currency": "SEK",
+  "default_market": "XSTO",
+  "default_country": "SE",
+  "default_manual_source": "seed"
+}

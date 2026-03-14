@@ -1,2 +1,8 @@
-instrument_id,isin,name,avanza_available,last_verified_date
-SE0000000000,SE0000000000,Example Fund,true,2026-03-14
+instrument_id,isin,name,asset_type,ticker,currency,market,country,avanza_available,last_verified_date,availability_source,notes
+SE0000000000,SE0000000000,Example Fund,fund,EXFUND,SEK,XSTO,SE,true,2026-03-14,manual_check,Seed baseline
+SE0000000001,SE0000000001,Example Stock,stock,EXSTK,SEK,XSTO,SE,true,2026-03-10,manual_check,High liquidity sample
+SE0000000002,SE0000000002,Nordic Dividend Fund,fund,NORDDIV,SEK,XSTO,SE,true,2026-02-20,manual_check,Monthly check cadence
+SE0000000005,SE0000000005,Nordic Bank Stock,stock,NORDKB,SEK,XSTO,SE,true,2026-01-10,manual_check,Reconfirm after earnings
+US0000000001,US0000000001,Example Global,stock,EXGLB,USD,XNYS,US,false,2025-12-01,legacy_import,Not listed in Sweden
+US0000000002,US0000000002,Emerging Markets ETF,etf,EMETF,USD,XNYS,US,false,2026-02-01,manual_check,ETF availability limited
+US0000000003,US0000000003,Green Energy ETF,etf,GREEN,USD,XNYS,US,true,,manual_check,Pending verification

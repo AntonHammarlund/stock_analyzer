@@ -1,0 +1,11 @@
+instrument_id,isin,name,asset_type,ticker,currency,market,country,sector,industry,manual_source,notes
+SE0000000000,SE0000000000,Example Fund,fund,EXFUND,SEK,XSTO,SE,Multi-asset,Balanced,seed,Core sample fund
+SE0000000001,SE0000000001,Example Stock,stock,EXSTK,SEK,XSTO,SE,Industrials,Diversified,seed,Core sample stock
+US0000000001,US0000000001,Example Global,stock,EXGLB,USD,XNYS,US,Technology,Platforms,seed,Global anchor position
+SE0000000002,SE0000000002,Nordic Dividend Fund,fund,NORDDIV,SEK,XSTO,SE,Equity,Dividend,seed,Income tilt
+SE0000000003,SE0000000003,Sweden Large Cap Index,fund,SWEIDX,SEK,XSTO,SE,Equity,Index,seed,Core Sweden exposure
+SE0000000004,SE0000000004,Global Quality Equity,fund,GLBQUAL,SEK,XSTO,SE,Equity,Quality,seed,Quality tilt
+US0000000002,US0000000002,Emerging Markets ETF,etf,EMETF,USD,XNYS,US,Equity,Emerging,seed,Satellite allocation
+US0000000003,US0000000003,Green Energy ETF,etf,GREEN,USD,XNYS,US,Energy,Renewables,seed,Thematic sleeve
+SE0000000005,SE0000000005,Nordic Bank Stock,stock,NORDKB,SEK,XSTO,SE,Financials,Banks,seed,Cyclical exposure
+US0000000004,US0000000004,US Mega Cap Basket,fund,USMEGA,USD,XNYS,US,Equity,Mega cap,seed,Large cap blend
