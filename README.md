@@ -32,6 +32,15 @@ Run once to generate or refresh outputs:
 python scripts/run_daily.py
 ```
 
+## ML stub (local testing)
+Generate local ML scores to simulate off-host output:
+
+```bash
+python scripts/run_ml_stub.py
+```
+
+This writes `data/ml_scores.json`, which the app reads automatically.
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list

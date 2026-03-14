@@ -10,6 +10,7 @@ __pycache__/
 /data/cache.sqlite
 /data/*.parquet
 /data/*.csv
+/data/*.json
 /reports/*.json
 /reports/*.html
 

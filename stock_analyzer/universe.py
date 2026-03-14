@@ -204,7 +204,12 @@ def _evaluate_availability(df: pd.DataFrame, settings: Dict[str, object]) -> pd.
 
     if "last_verified_date" in df.columns:
         verified = pd.to_datetime(df["last_verified_date"], errors="coerce")
-        age_days = (pd.Timestamp.utcnow().normalize() - verified).dt.days
+        today = pd.Timestamp.utcnow().normalize()
+        if getattr(today, "tzinfo", None) is not None:
+            today = today.tz_localize(None)
+        if getattr(verified.dt, "tz", None) is not None:
+            verified = verified.dt.tz_localize(None)
+        age_days = (today - verified).dt.days
         fresh = verified.notna() & (age_days <= ttl_days)
         stale = verified.notna() & (age_days > ttl_days)
         df.loc[available & fresh, "availability_status"] = "confirmed"
