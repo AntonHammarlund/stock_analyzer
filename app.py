@@ -12,6 +12,7 @@ from stock_analyzer.users import (
     set_active_user_id,
 )
 from stock_analyzer.universe import build_universe
+from stock_analyzer.data_sources.price_data import load_prices
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 
@@ -137,8 +138,8 @@ st.sidebar.caption(f"Holdings: {len(holdings)}")
 if not report:
     st.info("No report found yet. Run Daily Refresh to generate the first report.")
 
-tab_overview, tab_top, tab_outlook, tab_portfolio = st.tabs(
-    ["Overview", "Top Picks", "Market Outlook", "Portfolio"]
+tab_overview, tab_top, tab_outlook, tab_summary, tab_portfolio, tab_instrument = st.tabs(
+    ["Overview", "Top Picks", "Market Outlook", "Summary", "Portfolio", "Instrument"]
 )
 
 with tab_overview:
@@ -254,6 +255,51 @@ with tab_outlook:
     st.divider()
     st.markdown("**Deeper View**")
     st.write(deep)
+
+with tab_summary:
+    st.subheader("Market Summary")
+    universe_df = load_universe()
+    if universe_df.empty:
+        st.info("Universe is empty; import instruments to see summary.")
+    else:
+        prices_df = load_prices(universe_df)
+        if prices_df.empty:
+            st.info("No price data available yet.")
+        else:
+            prices_df["date"] = pd.to_datetime(prices_df["date"])
+            recent = prices_df.sort_values("date")
+            latest_date = recent["date"].max()
+            st.caption(f"Latest data: {latest_date.date()}")
+
+            def compute_trend(window_days: int) -> float | None:
+                cutoff = latest_date - pd.Timedelta(days=window_days)
+                subset = recent[recent["date"] >= cutoff]
+                if subset.empty:
+                    return None
+                pivot = subset.pivot_table(index="date", columns="instrument_id", values="close")
+                returns = pivot.pct_change().dropna(how="all")
+                if returns.empty:
+                    return None
+                avg_return = returns.mean(axis=1)
+                cumulative = (1 + avg_return).prod() - 1
+                return float(cumulative)
+
+            short_1w = compute_trend(7)
+            short_3w = compute_trend(21)
+            long_1y = compute_trend(365)
+            long_5y = compute_trend(365 * 5)
+
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("1W Trend", format_metric(short_1w, "{:.2%}") if short_1w is not None else "n/a")
+            col2.metric("3W Trend", format_metric(short_3w, "{:.2%}") if short_3w is not None else "n/a")
+            col3.metric("1Y Trend", format_metric(long_1y, "{:.2%}") if long_1y is not None else "n/a")
+            col4.metric("5Y Trend", format_metric(long_5y, "{:.2%}") if long_5y is not None else "n/a")
+
+            st.markdown("**Top Picks Context**")
+            st.write(
+                "Top picks are selected from the same universe with ETFs excluded. "
+                "Short-term trends emphasize the last 1-3 weeks; long-term trends emphasize 1-5 years."
+            )
 
 with tab_portfolio:
     st.subheader("Portfolio")
@@ -381,3 +427,72 @@ with tab_portfolio:
             save_portfolio(holdings, active_user_id)
             st.success("Holding removed.")
             st.rerun()
+
+with tab_instrument:
+    st.subheader("Instrument View")
+    universe_df = load_universe()
+    if universe_df.empty:
+        st.info("Universe is empty; import instruments to explore.")
+    else:
+        search_term = st.text_input("Search instruments")
+        filtered = universe_df.copy()
+        if search_term:
+            needle = search_term.strip().lower()
+            mask = (
+                filtered.get("name", "").astype(str).str.lower().str.contains(needle, na=False)
+                | filtered.get("ticker", "").astype(str).str.lower().str.contains(needle, na=False)
+                | filtered.get("isin", "").astype(str).str.lower().str.contains(needle, na=False)
+                | filtered.get("instrument_id", "").astype(str).str.lower().str.contains(needle, na=False)
+            )
+            filtered = filtered[mask]
+
+        filtered = filtered.head(100) if not filtered.empty else filtered
+        if filtered.empty:
+            st.info("No instruments matched your search.")
+        else:
+            options = [
+                f"{row.get('name', 'Unknown')} ({row.get('instrument_id')})"
+                for _, row in filtered.iterrows()
+            ]
+            selected = st.selectbox("Select instrument", options)
+            idx = options.index(selected)
+            instrument = filtered.iloc[idx]
+            instrument_id = str(instrument.get("instrument_id"))
+
+            price_df = load_prices(universe_df, instrument_ids=[instrument_id])
+            if price_df.empty:
+                st.info("No price data available yet.")
+            else:
+                price_df["date"] = pd.to_datetime(price_df["date"])
+                price_df = price_df.sort_values("date")
+                fig = px.line(price_df, x="date", y="close", title="Price history")
+                st.plotly_chart(fig, use_container_width=True)
+
+                config = load_config()
+                projection_days = int(config.get("projection_days", 90))
+                recent = price_df.tail(60)
+                if len(recent) >= 5:
+                    returns = recent["close"].pct_change().dropna()
+                    mu = returns.mean()
+                    sigma = returns.std()
+                    last_price = recent["close"].iloc[-1]
+                    projected = [last_price]
+                    for _ in range(projection_days):
+                        projected.append(projected[-1] * (1 + mu))
+                    proj_dates = pd.date_range(
+                        start=price_df["date"].iloc[-1] + pd.Timedelta(days=1),
+                        periods=projection_days + 1,
+                        freq="B",
+                    )
+                    projection_df = pd.DataFrame(
+                        {"date": proj_dates, "projection": projected}
+                    )
+                    fig_proj = px.line(
+                        projection_df, x="date", y="projection", title="Illustrative projection"
+                    )
+                    st.plotly_chart(fig_proj, use_container_width=True)
+                    st.caption(
+                        "Projection is illustrative and based on recent average returns; not investment advice."
+                    )
+                else:
+                    st.info("Not enough recent data to build a projection.")

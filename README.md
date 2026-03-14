@@ -64,6 +64,16 @@ You can create a desktop shortcut to `launch_menu.cmd` if you want a one-click m
 This app supports lightweight local profiles (no passwords). You can add users from the sidebar and switch the active user.
 Each user has a separate portfolio file under `data/portfolios/`.
 
+## Import a larger universe
+To load thousands of instruments, import a CSV into `data/universe_import.csv`:
+
+```powershell
+python scripts/import_universe_csv.py --source "C:\path\to\your_universe.csv" --overwrite
+```
+
+Your CSV can include these columns:
+`instrument_id`, `isin`, `name`, `asset_type`, `ticker`, `currency`, `market`, `country`, `sector`, `industry`, `manual_source`, `notes`.
+
 ## Configuration
 - config/defaults.json: core settings
 - config/hosts.json: host priority list

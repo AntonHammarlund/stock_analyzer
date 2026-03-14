@@ -2,26 +2,45 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Iterable, Optional
 
 from ..paths import DATA_DIR
+from ..config import load_config
 
 SAMPLE_PRICES = DATA_DIR / "sample_prices.csv"
 
 
-def load_prices(universe: pd.DataFrame) -> pd.DataFrame:
+def load_prices(universe: pd.DataFrame, instrument_ids: Optional[Iterable[str]] = None) -> pd.DataFrame:
     if SAMPLE_PRICES.exists():
-        return pd.read_csv(SAMPLE_PRICES)
-    return _generate_sample_prices(universe)
+        df = pd.read_csv(SAMPLE_PRICES)
+        return _filter_instruments(df, instrument_ids)
+    return _generate_sample_prices(universe, instrument_ids)
 
 
-def _generate_sample_prices(universe: pd.DataFrame) -> pd.DataFrame:
+def _filter_instruments(df: pd.DataFrame, instrument_ids: Optional[Iterable[str]]) -> pd.DataFrame:
+    if instrument_ids is None:
+        return df
+    ids = {str(value) for value in instrument_ids}
+    return df[df["instrument_id"].astype(str).isin(ids)]
+
+
+def _generate_sample_prices(
+    universe: pd.DataFrame, instrument_ids: Optional[Iterable[str]] = None
+) -> pd.DataFrame:
+    config = load_config()
+    history_days = int(config.get("price_history_days", 365))
     np.random.seed(42)
     rows = []
     end = datetime.utcnow().date()
-    start = end - timedelta(days=120)
+    start = end - timedelta(days=history_days)
     dates = pd.date_range(start=start, end=end, freq="B")
 
-    for _, row in universe.iterrows():
+    if instrument_ids is not None:
+        instruments = universe[universe["instrument_id"].isin(list(instrument_ids))]
+    else:
+        instruments = universe
+
+    for _, row in instruments.iterrows():
         price = 100 + np.random.rand() * 20
         for date in dates:
             price *= 1 + np.random.normal(0, 0.002)
@@ -32,4 +51,8 @@ def _generate_sample_prices(universe: pd.DataFrame) -> pd.DataFrame:
                     "close": round(price, 2),
                 }
             )
-    return pd.DataFrame(rows)
+
+    df = pd.DataFrame(rows)
+    if instrument_ids is None and not df.empty:
+        df.to_csv(SAMPLE_PRICES, index=False)
+    return df

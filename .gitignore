@@ -12,6 +12,7 @@ __pycache__/
 /data/*.csv
 /data/*.json
 /data/portfolios/*.json
+/data/universe_import.csv
 /reports/*.json
 /reports/*.html
 

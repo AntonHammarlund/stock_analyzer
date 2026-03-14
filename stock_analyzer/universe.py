@@ -5,6 +5,7 @@ import pandas as pd
 
 from .data_sources.avanza_availability import AvanzaAvailabilitySource
 from .data_sources.universe_manual import ManualUniverseSource
+from .data_sources.universe_import import ImportedUniverseSource
 from .paths import CONFIG_DIR
 from .utils import read_json
 
@@ -291,12 +292,17 @@ def build_universe() -> pd.DataFrame:
     settings = _load_settings()
 
     manual = ManualUniverseSource().fetch()
+    imported = ImportedUniverseSource().fetch()
     avanza = AvanzaAvailabilitySource().fetch()
 
-    if manual.empty and avanza.empty:
+    if manual.empty and imported.empty and avanza.empty:
         return _fallback_universe()
 
-    universe = _merge_sources(manual, avanza, settings)
+    combined_manual = pd.concat([manual, imported], ignore_index=True)
+    if not combined_manual.empty:
+        combined_manual = combined_manual.drop_duplicates(subset=["instrument_id"], keep="last")
+
+    universe = _merge_sources(combined_manual, avanza, settings)
     if universe.empty:
         return _fallback_universe()
 
