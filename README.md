@@ -141,10 +141,10 @@ The script updates `data/universe_import.csv` and `data/prices_import.csv`, merg
 keeping the most recent `price_history_days` of prices. The daily pipeline will only publish summaries
 when the imported universe is large enough and price data is within the freshness window.
 
-## Hybrid free mode (daily watchlist + periodic large universe)
+## Hybrid free mode (daily watchlist + rolling large universe)
 If you want everything free, use the hybrid mode:
 - **Daily watchlist** uses free APIs (small list, updated daily).
-- **Large universe** uses periodic CSV imports (not necessarily daily).
+- **Large universe** uses Alpha Vantage LISTING_STATUS for the universe and rolling daily price batches.
 
 ### Watchlist setup
 1. Add instruments to `data/watchlist.csv` with columns:
@@ -173,6 +173,23 @@ python scripts/run_daily.py --sync-watchlist --force
 
 The GitHub Actions workflow also runs `scripts/sync_watchlist.py` daily and commits
 `data/watchlist.csv` and `data/prices_watchlist.csv`.
+
+### Large universe (Alpha Vantage)
+Enable the Alpha Vantage universe by setting your API key:
+
+```powershell
+$env:ALPHAVANTAGE_API_KEY="your-key"
+```
+
+Then run:
+
+```powershell
+python scripts/sync_data.py
+```
+
+The importer updates `data/universe_import.csv` immediately and fills `data/prices_import.csv`
+in rolling batches (`batch_size` in `config/alpha_vantage.json`) so coverage grows daily without
+manual downloads.
 
 ## Data provider configuration
 Set your data provider in `config/data_provider.json`. The project expects a licensed, daily-updated

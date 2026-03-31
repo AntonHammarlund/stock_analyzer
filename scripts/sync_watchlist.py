@@ -146,7 +146,8 @@ def main() -> None:
     alpha_enabled = bool(alpha_cfg.get("enabled", True))
     market_enabled = bool(market_cfg.get("enabled", False))
 
-    alpha_key = os.getenv(alpha_cfg.get("api_key_env", "ALPHAVANTAGE_API_KEY"))
+    alpha_env = alpha_cfg.get("api_key_env", "ALPHAVANTAGE_API_KEY")
+    alpha_key = os.getenv(alpha_env) or os.getenv(alpha_env.lower()) or os.getenv(alpha_env.upper())
     market_key = os.getenv(market_cfg.get("api_key_env", "MARKETSTACK_API_KEY"))
     if alpha_enabled and not alpha_key:
         print("Alpha Vantage enabled but API key missing (ALPHAVANTAGE_API_KEY).")

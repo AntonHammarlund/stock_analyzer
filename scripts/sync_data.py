@@ -18,6 +18,11 @@ from stock_analyzer.data_sources.nasdaq_nordic import (
     build_reference_universe,
 )
 from stock_analyzer.data_sources.stooq import StooqConfig, build_stooq_prices, build_stooq_universe
+from stock_analyzer.data_sources.alpha_vantage import (
+    load_alpha_vantage_config,
+    build_alpha_vantage_universe,
+    build_alpha_vantage_prices,
+)
 from stock_analyzer.data_sources.universe_import import IMPORT_FILE, OUTPUT_COLUMNS
 from stock_analyzer.paths import CONFIG_DIR, DATA_DIR
 from stock_analyzer.utils import read_json
@@ -172,6 +177,23 @@ def main() -> None:
     universe_frames: List[pd.DataFrame] = []
     price_frames: List[pd.DataFrame] = []
     sources: List[str] = []
+
+    alpha_cfg = load_alpha_vantage_config()
+    if alpha_cfg.enabled:
+        av_universe, reason = build_alpha_vantage_universe(alpha_cfg)
+        if not av_universe.empty:
+            universe_frames.append(av_universe)
+            sources.append("alpha_vantage_universe")
+            av_prices, price_reason = build_alpha_vantage_prices(
+                alpha_cfg, av_universe["instrument_id"]
+            )
+            if not av_prices.empty:
+                price_frames.append(av_prices)
+                sources.append("alpha_vantage_prices")
+            elif price_reason:
+                print(f"Alpha Vantage prices skipped: {price_reason}")
+        else:
+            print(f"Alpha Vantage universe skipped: {reason}")
 
     stooq_cfg = _load_stooq_config(keep_days)
     if stooq_cfg:

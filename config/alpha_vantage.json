@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "api_key_env": "ALPHAVANTAGE_API_KEY",
+  "include_delisted": false,
+  "exchange_allowlist": ["NASDAQ", "NYSE", "AMEX", "NYSE ARCA", "BATS"],
+  "exclude_asset_types": ["ETF"],
+  "max_symbols": 5000,
+  "batch_size": 25,
+  "rate_limit_sleep_sec": 12,
+  "outputsize": "compact",
+  "history_days": 365,
+  "notes": "Uses Alpha Vantage LISTING_STATUS for universe and rolling TIME_SERIES_DAILY batches for prices."
+}
