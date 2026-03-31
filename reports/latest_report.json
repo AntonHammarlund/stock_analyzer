@@ -1,6 +1,6 @@
 {
   "report_version": 2,
-  "generated_at": "2026-03-31T15:37:48.696024+00:00",
+  "generated_at": "2026-03-31T15:40:08.636680+00:00",
   "top_picks": [
     {
       "instrument_id": "a.us",
@@ -166,11 +166,11 @@
     "Using stale ML cache; remote refresh unavailable."
   ],
   "run": {
-    "run_id": "477d61fa514643aabb3cbd799081187b",
+    "run_id": "dfa73bf3aff94e1eb282e3668caa6d51",
     "status": "success",
-    "started_at": "2026-03-31T15:37:39.485467+00:00",
-    "finished_at": "2026-03-31T15:37:48.695029+00:00",
-    "duration_sec": 9.21,
+    "started_at": "2026-03-31T15:39:58.871160+00:00",
+    "finished_at": "2026-03-31T15:40:08.636680+00:00",
+    "duration_sec": 9.76,
     "execution_host": {
       "id": "local",
       "type": "local",
