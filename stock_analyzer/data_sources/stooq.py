@@ -55,7 +55,7 @@ def _build_download_urls(market: str, base_urls: Iterable[str]) -> List[str]:
         if base.endswith("/"):
             urls.append(f"{base}{_stooq_filename(market)}")
         else:
-            urls.append(f"{base}d_{market}_txt")
+            urls.append(f"{base}{_stooq_filename(market)}")
     return urls
 
 
@@ -102,6 +102,7 @@ def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
                     sleep_for = config.backoff_sec * attempt
                     time.sleep(sleep_for)
                 else:
+                    print(f"Download failed for {url}: {exc}")
                     break
 
     if last_error:

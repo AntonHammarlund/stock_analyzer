@@ -148,6 +148,10 @@ def main() -> None:
 
     alpha_key = os.getenv(alpha_cfg.get("api_key_env", "ALPHAVANTAGE_API_KEY"))
     market_key = os.getenv(market_cfg.get("api_key_env", "MARKETSTACK_API_KEY"))
+    if alpha_enabled and not alpha_key:
+        print("Alpha Vantage enabled but API key missing (ALPHAVANTAGE_API_KEY).")
+    if market_enabled and not market_key:
+        print("Marketstack enabled but API key missing (MARKETSTACK_API_KEY).")
 
     alpha_function = alpha_cfg.get("function", "TIME_SERIES_DAILY")
     alpha_outputsize = alpha_cfg.get("outputsize", "compact")
