@@ -9,6 +9,8 @@
   "max_retries": 3,
   "backoff_sec": 2.0,
   "retry_statuses": [408, 429, 500, 502, 503, 504],
+  "download_enabled": false,
+  "allow_stale_local": false,
   "base_urls": [
     "https://static.stooq.com/db/h/",
     "https://stooq.com/db/h/",

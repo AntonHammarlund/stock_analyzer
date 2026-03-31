@@ -131,6 +131,8 @@ def _load_stooq_config(keep_days: int) -> StooqConfig | None:
     max_retries = int(cfg.get("max_retries", 3))
     backoff_sec = float(cfg.get("backoff_sec", 2.0))
     retry_statuses = cfg.get("retry_statuses") or [408, 429, 500, 502, 503, 504]
+    download_enabled = bool(cfg.get("download_enabled", True))
+    allow_stale_local = bool(cfg.get("allow_stale_local", False))
     base_urls = cfg.get("base_urls")
     stooq_cfg = StooqConfig(
         enabled=True,
@@ -143,6 +145,8 @@ def _load_stooq_config(keep_days: int) -> StooqConfig | None:
         max_retries=max_retries,
         backoff_sec=backoff_sec,
         retry_statuses=retry_statuses,
+        download_enabled=download_enabled,
+        allow_stale_local=allow_stale_local,
     )
     if base_urls:
         stooq_cfg.base_urls = base_urls

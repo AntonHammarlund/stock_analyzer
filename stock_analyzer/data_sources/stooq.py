@@ -40,6 +40,8 @@ class StooqConfig:
     max_retries: int = 3
     backoff_sec: float = 2.0
     retry_statuses: List[int] = field(default_factory=lambda: [408, 429, 500, 502, 503, 504])
+    download_enabled: bool = True
+    allow_stale_local: bool = False
     base_urls: List[str] = field(
         default_factory=lambda: [STOOQ_STATIC_BASE, STOOQ_DYNAMIC_BASE]
     )
@@ -74,6 +76,24 @@ def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
         age_days = (datetime.utcnow() - datetime.utcfromtimestamp(dest.stat().st_mtime)).days
         if age_days <= config.cache_ttl_days:
             return dest
+        if config.allow_stale_local:
+            print(
+                f"Using stale local Stooq archive for {market} ({age_days} days old)."
+            )
+            return dest
+        print(
+            f"Local Stooq archive for {market} is stale ({age_days} days). "
+            "Download a fresh copy to continue."
+        )
+        if not config.download_enabled:
+            return None
+
+    if not config.download_enabled:
+        print(
+            f"Stooq download disabled and no local archive available for {market}. "
+            "Place d_{market}_txt.zip into data/stooq/."
+        )
+        return None
 
     urls = _build_download_urls(market, config.base_urls)
     headers = {"User-Agent": "Mozilla/5.0"}
