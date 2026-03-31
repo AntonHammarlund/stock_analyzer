@@ -1,5 +1,8 @@
 name: Daily sync and report
 
+permissions:
+  contents: write
+
 on:
   schedule:
     - cron: "0 6 * * *"
