@@ -6,6 +6,9 @@
   "max_instruments": 5000,
   "exclude_asset_types": ["etf"],
   "cache_ttl_days": 1,
+  "max_retries": 3,
+  "backoff_sec": 2.0,
+  "retry_statuses": [408, 429, 500, 502, 503, 504],
   "base_urls": [
     "https://static.stooq.com/db/h/",
     "https://stooq.com/db/h/db/d/?b="

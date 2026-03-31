@@ -128,6 +128,9 @@ def _load_stooq_config(keep_days: int) -> StooqConfig | None:
     max_instruments = int(cfg.get("max_instruments", 5000))
     exclude_asset_types = cfg.get("exclude_asset_types") or ["etf"]
     cache_ttl_days = int(cfg.get("cache_ttl_days", 1))
+    max_retries = int(cfg.get("max_retries", 3))
+    backoff_sec = float(cfg.get("backoff_sec", 2.0))
+    retry_statuses = cfg.get("retry_statuses") or [408, 429, 500, 502, 503, 504]
     base_urls = cfg.get("base_urls")
     stooq_cfg = StooqConfig(
         enabled=True,
@@ -137,6 +140,9 @@ def _load_stooq_config(keep_days: int) -> StooqConfig | None:
         max_instruments=max_instruments,
         exclude_asset_types=exclude_asset_types,
         cache_ttl_days=cache_ttl_days,
+        max_retries=max_retries,
+        backoff_sec=backoff_sec,
+        retry_statuses=retry_statuses,
     )
     if base_urls:
         stooq_cfg.base_urls = base_urls

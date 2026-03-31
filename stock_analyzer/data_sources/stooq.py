@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Iterable, List, Optional
+import time
 import zipfile
 
 import pandas as pd
@@ -36,6 +37,9 @@ class StooqConfig:
     max_instruments: int = 5000
     exclude_asset_types: List[str] = field(default_factory=lambda: ["etf"])
     cache_ttl_days: int = 1
+    max_retries: int = 3
+    backoff_sec: float = 2.0
+    retry_statuses: List[int] = field(default_factory=lambda: [408, 429, 500, 502, 503, 504])
     base_urls: List[str] = field(
         default_factory=lambda: [STOOQ_STATIC_BASE, STOOQ_DYNAMIC_BASE]
     )
@@ -55,6 +59,12 @@ def _build_download_urls(market: str, base_urls: Iterable[str]) -> List[str]:
     return urls
 
 
+def _should_retry_status(status_code: Optional[int], retry_statuses: Iterable[int]) -> bool:
+    if status_code is None:
+        return True
+    return int(status_code) in {int(code) for code in retry_statuses}
+
+
 def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
     cache_dir = DATA_DIR / "stooq"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -70,20 +80,29 @@ def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
     last_error = None
 
     for url in urls:
-        try:
-            with requests.get(url, stream=True, timeout=config.timeout_sec, headers=headers) as response:
-                response.raise_for_status()
-                with dest.open("wb") as file:
-                    for chunk in response.iter_content(chunk_size=1024 * 1024):
-                        if chunk:
-                            file.write(chunk)
-            if dest.stat().st_size > 1_000_000 and zipfile.is_zipfile(dest):
-                return dest
-        except Exception as exc:
-            last_error = exc
-            if dest.exists():
-                dest.unlink(missing_ok=True)
-            continue
+        for attempt in range(1, max(1, config.max_retries) + 1):
+            try:
+                with requests.get(url, stream=True, timeout=config.timeout_sec, headers=headers) as response:
+                    if response.status_code >= 400:
+                        if _should_retry_status(response.status_code, config.retry_statuses):
+                            raise requests.HTTPError(f"HTTP {response.status_code}", response=response)
+                        response.raise_for_status()
+                    with dest.open("wb") as file:
+                        for chunk in response.iter_content(chunk_size=1024 * 1024):
+                            if chunk:
+                                file.write(chunk)
+                if dest.stat().st_size > 1_000_000 and zipfile.is_zipfile(dest):
+                    return dest
+                raise ValueError("Downloaded file is too small or not a valid zip.")
+            except Exception as exc:
+                last_error = exc
+                if dest.exists():
+                    dest.unlink(missing_ok=True)
+                if attempt < config.max_retries:
+                    sleep_for = config.backoff_sec * attempt
+                    time.sleep(sleep_for)
+                else:
+                    break
 
     if last_error:
         print(f"Failed to download Stooq {market} data: {last_error}")
