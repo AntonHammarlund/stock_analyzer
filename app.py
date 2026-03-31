@@ -43,7 +43,9 @@ st.markdown(
         section[data-testid="stSidebar"] { background-color: var(--sand); }
         section[data-testid="stSidebar"] * { color: var(--ink); }
         section[data-testid="stSidebar"] .stButton > button,
-        section[data-testid="stSidebar"] .stLinkButton > a {
+        section[data-testid="stSidebar"] .stButton > button * ,
+        section[data-testid="stSidebar"] .stLinkButton > a,
+        section[data-testid="stSidebar"] .stLinkButton > a * {
             background-color: var(--sidebar-button);
             color: var(--sidebar-button-text);
         }
