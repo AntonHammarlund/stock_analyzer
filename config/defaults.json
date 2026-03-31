@@ -16,7 +16,7 @@
   "price_history_days": 365,
   "projection_days": 90,
   "watchlist_file": "data/watchlist.csv",
-  "watchlist_min_size": 25,
+  "watchlist_min_size": 10,
   "max_watchlist_price_age_days": 1,
   "max_large_price_age_days": 30,
   "require_imported_universe": true,

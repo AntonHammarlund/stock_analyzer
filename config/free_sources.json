@@ -14,12 +14,14 @@
         "enabled": true,
         "api_key_env": "ALPHAVANTAGE_API_KEY",
         "function": "TIME_SERIES_DAILY",
-        "outputsize": "compact"
+        "outputsize": "compact",
+        "rate_limit_sleep_sec": 12
       },
       "marketstack": {
         "enabled": false,
         "api_key_env": "MARKETSTACK_API_KEY",
-        "endpoint": "https://api.marketstack.com/v1/eod/latest"
+        "endpoint": "https://api.marketstack.com/v1/eod/latest",
+        "rate_limit_sleep_sec": 1
       }
     },
     "default_provider": "alpha_vantage"

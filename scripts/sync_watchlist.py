@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List
 
@@ -25,7 +26,9 @@ def _load_config() -> Dict:
     return read_json(cfg_path)
 
 
-def _fetch_alpha_vantage(symbol: str, api_key: str, function: str, outputsize: str) -> Dict[str, float] | None:
+def _fetch_alpha_vantage(
+    symbol: str, api_key: str, function: str, outputsize: str
+) -> List[Dict[str, float]] | None:
     url = (
         "https://www.alphavantage.co/query"
         f"?function={function}&symbol={symbol}&outputsize={outputsize}&apikey={api_key}"
@@ -38,15 +41,18 @@ def _fetch_alpha_vantage(symbol: str, api_key: str, function: str, outputsize: s
     series = payload.get("Time Series (Daily)") or payload.get("Time Series (Daily)".lower())
     if not isinstance(series, dict) or not series:
         return None
-    latest_date = sorted(series.keys())[-1]
-    entry = series.get(latest_date, {})
-    close_value = entry.get("4. close") or entry.get("5. adjusted close")
-    if close_value is None:
-        return None
-    return {"date": latest_date, "close": float(close_value)}
+    rows: List[Dict[str, float]] = []
+    for date_str, entry in series.items():
+        if not isinstance(entry, dict):
+            continue
+        close_value = entry.get("4. close") or entry.get("5. adjusted close")
+        if close_value is None:
+            continue
+        rows.append({"date": date_str, "close": float(close_value)})
+    return rows or None
 
 
-def _fetch_marketstack(symbol: str, api_key: str, endpoint: str) -> Dict[str, float] | None:
+def _fetch_marketstack(symbol: str, api_key: str, endpoint: str) -> List[Dict[str, float]] | None:
     url = f"{endpoint}?access_key={api_key}&symbols={symbol}"
     response = requests.get(url, timeout=30)
     response.raise_for_status()
@@ -62,7 +68,7 @@ def _fetch_marketstack(symbol: str, api_key: str, endpoint: str) -> Dict[str, fl
     if close_value is None or date_value is None:
         return None
     date_str = str(date_value).split("T")[0]
-    return {"date": date_str, "close": float(close_value)}
+    return [{"date": date_str, "close": float(close_value)}]
 
 
 def main() -> None:
@@ -102,9 +108,12 @@ def main() -> None:
 
     alpha_function = alpha_cfg.get("function", "TIME_SERIES_DAILY")
     alpha_outputsize = alpha_cfg.get("outputsize", "compact")
+    alpha_sleep = float(alpha_cfg.get("rate_limit_sleep_sec", 12))
     market_endpoint = market_cfg.get("endpoint", "https://api.marketstack.com/v1/eod/latest")
+    market_sleep = float(market_cfg.get("rate_limit_sleep_sec", 1))
 
     rows: List[Dict] = []
+    failed_symbols: List[str] = []
     max_size = int(watch_cfg.get("max_size", 25))
     if max_size > 0 and len(watchlist) > max_size:
         watchlist = watchlist.head(max_size)
@@ -115,26 +124,38 @@ def main() -> None:
         provider = str(row.get("provider") or default_provider).lower()
 
         result = None
-        if provider == "marketstack" and market_enabled and market_key:
-            result = _fetch_marketstack(symbol, market_key, market_endpoint)
-            source = "marketstack"
-        elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
-            result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
-            source = "alpha_vantage"
-        else:
-            source = provider
-
-        if result is None:
+        source = provider
+        try:
+            if provider == "marketstack" and market_enabled and market_key:
+                result = _fetch_marketstack(symbol, market_key, market_endpoint)
+                source = "marketstack"
+                if market_sleep:
+                    time.sleep(market_sleep)
+            elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
+                result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
+                source = "alpha_vantage"
+                if alpha_sleep:
+                    time.sleep(alpha_sleep)
+        except Exception as exc:
+            print(f"Fetch failed for {symbol} via {provider}: {exc}")
+            failed_symbols.append(symbol)
             continue
 
-        rows.append(
-            {
-                "instrument_id": instrument_id,
-                "date": result["date"],
-                "close": result["close"],
-                "source": source,
-            }
-        )
+        if not result:
+            failed_symbols.append(symbol)
+            continue
+
+        for entry in result:
+            if not isinstance(entry, dict):
+                continue
+            rows.append(
+                {
+                    "instrument_id": instrument_id,
+                    "date": entry["date"],
+                    "close": entry["close"],
+                    "source": source,
+                }
+            )
 
     if not rows:
         print("No watchlist prices fetched. Check API keys and provider config.")
@@ -160,6 +181,9 @@ def main() -> None:
     WATCHLIST_PRICES.parent.mkdir(parents=True, exist_ok=True)
     combined.to_csv(WATCHLIST_PRICES, index=False)
     print(f"Fetched {len(new_df)} watchlist rows.")
+    if failed_symbols:
+        unique_failed = sorted(set(failed_symbols))
+        print(f"Failed symbols: {', '.join(unique_failed)}")
 
 
 if __name__ == "__main__":
