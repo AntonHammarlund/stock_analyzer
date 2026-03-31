@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from stock_analyzer.config import load_config
 from stock_analyzer.data_sources.watchlist import load_watchlist
+from stock_analyzer.watchlist_builder import build_watchlist_if_needed
 from stock_analyzer.paths import DATA_DIR, CONFIG_DIR
 from stock_analyzer.utils import read_json
 
@@ -76,6 +77,7 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config()
+    build_watchlist_if_needed()
     watchlist = load_watchlist()
     if watchlist.empty:
         print("Watchlist is empty; nothing to sync.")
@@ -103,6 +105,9 @@ def main() -> None:
     market_endpoint = market_cfg.get("endpoint", "https://api.marketstack.com/v1/eod/latest")
 
     rows: List[Dict] = []
+    max_size = int(watch_cfg.get("max_size", 25))
+    if max_size > 0 and len(watchlist) > max_size:
+        watchlist = watchlist.head(max_size)
 
     for _, row in watchlist.iterrows():
         instrument_id = str(row.get("instrument_id"))

@@ -2,6 +2,13 @@
   "watchlist": {
     "enabled": true,
     "file": "data/watchlist.csv",
+    "max_size": 25,
+    "auto_seed": {
+      "enabled": true,
+      "from_portfolio": true,
+      "from_top_picks": true,
+      "fallback_symbols": ["AAPL", "MSFT", "AMZN", "GOOGL", "META", "NVDA", "TSLA", "JPM", "V", "XOM"]
+    },
     "providers": {
       "alpha_vantage": {
         "enabled": true,

@@ -152,6 +152,9 @@ $env:MARKETSTACK_API_KEY="your-key"
 python scripts/sync_watchlist.py
 ```
 
+If `data/watchlist.csv` is empty, the app will auto-seed it from your portfolio, latest top picks,
+and a small fallback list (configurable in `config/free_sources.json`).
+
 ### Daily run with watchlist sync
 
 ```powershell
