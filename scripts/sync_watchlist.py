@@ -54,6 +54,15 @@ def _load_stooq_config() -> StooqConfig | None:
     )
 
 
+def _to_stooq_symbol(symbol: str) -> str:
+    value = str(symbol).strip().lower()
+    if not value:
+        return value
+    if "." in value:
+        return value
+    return f"{value}.us"
+
+
 def _fetch_alpha_vantage(
     symbol: str, api_key: str, function: str, outputsize: str
 ) -> List[Dict[str, float]] | None:
@@ -187,6 +196,7 @@ def main() -> None:
 
     rows: List[Dict] = []
     stooq_symbols: List[str] = []
+    stooq_map: Dict[str, str] = {}
     stooq_cfg = _load_stooq_config()
     failed_symbols: List[str] = []
     max_size = int(watch_cfg.get("max_size", 25))
@@ -212,7 +222,10 @@ def main() -> None:
             if alpha_sleep:
                 time.sleep(alpha_sleep)
         elif provider == "alpha_vantage" and alpha_enabled and not alpha_key and stooq_cfg:
-            stooq_symbols.append(symbol)
+            stooq_symbol = _to_stooq_symbol(symbol)
+            if stooq_symbol:
+                stooq_symbols.append(stooq_symbol)
+                stooq_map[stooq_symbol] = instrument_id
             continue
         elif provider == "avanza":
             result = _fetch_avanza_prices(symbol)
@@ -223,7 +236,10 @@ def main() -> None:
             continue
 
         if provider == "stooq":
-            stooq_symbols.append(symbol)
+            stooq_symbol = _to_stooq_symbol(symbol)
+            if stooq_symbol:
+                stooq_symbols.append(stooq_symbol)
+                stooq_map[stooq_symbol] = instrument_id
             continue
 
         if not result:
@@ -246,6 +262,9 @@ def main() -> None:
         if stooq_symbols and stooq_cfg:
             stooq_prices = build_stooq_prices(stooq_cfg, stooq_symbols)
             if not stooq_prices.empty:
+                stooq_prices["instrument_id"] = (
+                    stooq_prices["instrument_id"].astype(str).str.lower().map(stooq_map)
+                )
                 stooq_prices["source"] = "stooq_local"
                 rows.extend(stooq_prices.to_dict("records"))
         if not rows:
