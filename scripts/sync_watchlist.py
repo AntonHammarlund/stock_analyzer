@@ -13,6 +13,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from stock_analyzer.config import load_config
+from stock_analyzer.data_sources.avanza_client import (
+    get_avanza_client,
+    get_avanza_constants,
+    load_avanza_config,
+)
 from stock_analyzer.data_sources.watchlist import load_watchlist
 from stock_analyzer.watchlist_builder import build_watchlist_if_needed
 from stock_analyzer.paths import DATA_DIR, CONFIG_DIR
@@ -69,6 +74,44 @@ def _fetch_marketstack(symbol: str, api_key: str, endpoint: str) -> List[Dict[st
         return None
     date_str = str(date_value).split("T")[0]
     return [{"date": date_str, "close": float(close_value)}]
+
+
+def _fetch_avanza_prices(orderbook_id: str) -> List[Dict[str, float]] | None:
+    cfg = load_avanza_config()
+    client, reason = get_avanza_client()
+    if client is None:
+        return None
+
+    constants = get_avanza_constants()
+    if constants is None:
+        return None
+    TimePeriod, Resolution, _ = constants
+
+    time_period = getattr(TimePeriod, cfg.chart_time_period, TimePeriod.ONE_YEAR)
+    resolution = getattr(Resolution, cfg.chart_resolution, Resolution.DAY)
+
+    try:
+        payload = client.get_chart_data(orderbook_id, time_period, resolution)
+    except Exception:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+    ohlc = payload.get("ohlc") or []
+    rows: List[Dict[str, float]] = []
+    for entry in ohlc:
+        if not isinstance(entry, dict):
+            continue
+        timestamp = entry.get("timestamp")
+        close_value = entry.get("close")
+        if timestamp is None or close_value is None:
+            continue
+        try:
+            dt = pd.to_datetime(timestamp, unit="ms", utc=True)
+        except Exception:
+            continue
+        rows.append({"date": dt.date().isoformat(), "close": float(close_value)})
+    return rows or None
 
 
 def main() -> None:
@@ -136,6 +179,9 @@ def main() -> None:
                 source = "alpha_vantage"
                 if alpha_sleep:
                     time.sleep(alpha_sleep)
+            elif provider == "avanza":
+                result = _fetch_avanza_prices(symbol)
+                source = "avanza"
         except Exception as exc:
             print(f"Fetch failed for {symbol} via {provider}: {exc}")
             failed_symbols.append(symbol)

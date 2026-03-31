@@ -17,6 +17,7 @@ from stock_analyzer.users import (
 from stock_analyzer.universe import build_universe
 from stock_analyzer.data_sources.price_data import load_prices
 from stock_analyzer.data_sources.universe_import import ImportedUniverseSource
+from stock_analyzer.data_sources.avanza_search import search_avanza
 from stock_analyzer.config import load_config
 from stock_analyzer.utils import read_json
 from stock_analyzer.paths import CONFIG_DIR
@@ -495,47 +496,89 @@ with tab_portfolio:
     add_mode = st.radio("Add method", ["Search", "Manual"], horizontal=True)
 
     if add_mode == "Search":
-        universe_df = load_universe()
-        if not universe_df.empty:
-            universe_df = universe_df[universe_df["asset_type"] != "etf"]
+        search_source = st.radio("Search source", ["Local", "Avanza"], horizontal=True)
 
-        search = st.text_input("Search by name, ticker, ISIN, or ID")
-        candidates = universe_df.copy()
-        if search and not candidates.empty:
-            search_lower = search.strip().lower()
-            mask = (
-                candidates.get("name", "").astype(str).str.lower().str.contains(search_lower, na=False)
-                | candidates.get("ticker", "").astype(str).str.lower().str.contains(search_lower, na=False)
-                | candidates.get("isin", "").astype(str).str.lower().str.contains(search_lower, na=False)
-                | candidates.get("instrument_id", "").astype(str).str.lower().str.contains(search_lower, na=False)
-            )
-            candidates = candidates[mask]
+        if search_source == "Local":
+            universe_df = load_universe()
+            if not universe_df.empty:
+                universe_df = universe_df[universe_df["asset_type"] != "etf"]
 
-        candidates = candidates.head(50) if not candidates.empty else candidates
+            search = st.text_input("Search by name, ticker, ISIN, or ID")
+            candidates = universe_df.copy()
+            if search and not candidates.empty:
+                search_lower = search.strip().lower()
+                mask = (
+                    candidates.get("name", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                    | candidates.get("ticker", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                    | candidates.get("isin", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                    | candidates.get("instrument_id", "").astype(str).str.lower().str.contains(search_lower, na=False)
+                )
+                candidates = candidates[mask]
 
-        if candidates.empty:
-            st.info("No instruments matched your search.")
+            candidates = candidates.head(50) if not candidates.empty else candidates
+
+            if candidates.empty:
+                st.info("No instruments matched your search.")
+            else:
+                options = [
+                    f"{row.get('name', 'Unknown')} ({row.get('instrument_id')})"
+                    for _, row in candidates.iterrows()
+                ]
+                selection = st.selectbox("Select instrument", options)
+                weight = st.number_input(
+                    "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
+                )
+                if st.button("Add selected"):
+                    idx = options.index(selection)
+                    row = candidates.iloc[idx]
+                    holding = {
+                        "instrument_id": str(row.get("instrument_id")).strip(),
+                        "name": str(row.get("name")).strip(),
+                        "weight": float(weight),
+                    }
+                    holdings.append(holding)
+                    save_portfolio(holdings, active_user_id)
+                    st.success("Holding added.")
+                    st.rerun()
         else:
-            options = [
-                f"{row.get('name', 'Unknown')} ({row.get('instrument_id')})"
-                for _, row in candidates.iterrows()
-            ]
-            selection = st.selectbox("Select instrument", options)
-            weight = st.number_input(
-                "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
-            )
-            if st.button("Add selected"):
-                idx = options.index(selection)
-                row = candidates.iloc[idx]
-                holding = {
-                    "instrument_id": str(row.get("instrument_id")).strip(),
-                    "name": str(row.get("name")).strip(),
-                    "weight": float(weight),
-                }
-                holdings.append(holding)
-                save_portfolio(holdings, active_user_id)
-                st.success("Holding added.")
-                st.rerun()
+            search = st.text_input("Search Avanza by name, ISIN, or ticker", key="avanza_search")
+            results = []
+            reason = None
+            if search.strip():
+                results, reason = search_avanza(search, types=["stock", "fund", "bond"])
+
+            if reason:
+                st.warning(
+                    "Avanza search unavailable. Enable config/avanza.json and provide credentials in env vars."
+                )
+            elif not results and search.strip():
+                st.info("No Avanza instruments matched your search.")
+            elif results:
+                options = [
+                    f"{row.get('name') or 'Unknown'} ({row.get('instrument_id')})"
+                    for row in results
+                    if row.get("instrument_id")
+                ]
+                if not options:
+                    st.info("No usable Avanza results (missing instrument IDs).")
+                else:
+                    selection = st.selectbox("Select Avanza instrument", options)
+                    weight = st.number_input(
+                        "Weight", min_value=0.0, max_value=1.0, value=0.1, step=0.01
+                    )
+                    if st.button("Add selected Avanza"):
+                        idx = options.index(selection)
+                        row = results[idx]
+                        holding = {
+                            "instrument_id": str(row.get("instrument_id")).strip(),
+                            "name": str(row.get("name")).strip(),
+                            "weight": float(weight),
+                            "provider": "avanza",
+                        }
+                        holdings.append(holding)
+                        save_portfolio(holdings, active_user_id)
+                        st.success("Holding added from Avanza.")
+                        st.rerun()
     else:
         with st.form("add_holding_manual"):
             instrument_id = st.text_input("Instrument ID")

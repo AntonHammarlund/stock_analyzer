@@ -126,6 +126,7 @@ def build_watchlist_if_needed(force: bool = False) -> pd.DataFrame:
             add_entry(
                 holding.get("instrument_id", ""),
                 name=holding.get("name"),
+                provider=holding.get("provider"),
                 notes="portfolio",
             )
 

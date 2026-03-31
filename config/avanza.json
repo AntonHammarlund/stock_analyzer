@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "username_env": "AVANZA_USERNAME",
+  "password_env": "AVANZA_PASSWORD",
+  "totp_env": "AVANZA_TOTP_SECRET",
+  "max_release_age_days": 90,
+  "enforce_package_freshness": true,
+  "chart_time_period": "ONE_YEAR",
+  "chart_resolution": "DAY",
+  "search_limit": 25,
+  "notes": "Unofficial Avanza API. Use only if you are comfortable with the risks and have 2FA/TOTP enabled."
+}

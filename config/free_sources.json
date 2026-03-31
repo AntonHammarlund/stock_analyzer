@@ -22,6 +22,10 @@
         "api_key_env": "MARKETSTACK_API_KEY",
         "endpoint": "https://api.marketstack.com/v1/eod/latest",
         "rate_limit_sleep_sec": 1
+      },
+      "avanza": {
+        "enabled": false,
+        "notes": "Uses config/avanza.json credentials and chart data."
       }
     },
     "default_provider": "alpha_vantage"
