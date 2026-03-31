@@ -1,1 +1,11 @@
 instrument_id,symbol,provider,name,asset_type,ticker,currency,market,country,notes
+AAPL,AAPL,alpha_vantage,AAPL,,,,,,fallback
+MSFT,MSFT,alpha_vantage,MSFT,,,,,,fallback
+AMZN,AMZN,alpha_vantage,AMZN,,,,,,fallback
+GOOGL,GOOGL,alpha_vantage,GOOGL,,,,,,fallback
+META,META,alpha_vantage,META,,,,,,fallback
+NVDA,NVDA,alpha_vantage,NVDA,,,,,,fallback
+TSLA,TSLA,alpha_vantage,TSLA,,,,,,fallback
+JPM,JPM,alpha_vantage,JPM,,,,,,fallback
+V,V,alpha_vantage,V,,,,,,fallback
+XOM,XOM,alpha_vantage,XOM,,,,,,fallback
