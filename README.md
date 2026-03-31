@@ -66,6 +66,16 @@ For the free watchlist sync, add these GitHub Actions secrets if you want the wo
 - `ALPHAVANTAGE_API_KEY`
 - `MARKETSTACK_API_KEY` (optional)
 
+## Cloud refresh link in the UI
+You can enable a one-click "Run Cloud Refresh" button in the Streamlit sidebar by setting
+`repo_url` or `actions_url` in `config/cloud.json`. Example:
+
+```json
+{
+  "repo_url": "https://github.com/<owner>/<repo>"
+}
+```
+
 ## ML stub (local testing)
 Generate local ML scores to simulate off-host output:
 

@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import subprocess
+from pathlib import Path
 
 from stock_analyzer.pipeline import run_daily
 from stock_analyzer.reports import load_latest_report
@@ -16,6 +18,8 @@ from stock_analyzer.universe import build_universe
 from stock_analyzer.data_sources.price_data import load_prices
 from stock_analyzer.data_sources.universe_import import ImportedUniverseSource
 from stock_analyzer.config import load_config
+from stock_analyzer.utils import read_json
+from stock_analyzer.paths import CONFIG_DIR
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 
@@ -67,6 +71,40 @@ def format_metric(value, fmt="{:.2f}") -> str:
         return str(value)
 
 
+def _load_cloud_links() -> dict:
+    cfg = read_json(CONFIG_DIR / "cloud.json")
+    if isinstance(cfg, dict):
+        return cfg
+    return {}
+
+
+def _derive_repo_url() -> str | None:
+    try:
+        output = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except Exception:
+        return None
+    if not output:
+        return None
+    if output.endswith(".git"):
+        output = output[:-4]
+    if output.startswith("git@github.com:"):
+        output = "https://github.com/" + output.split("git@github.com:")[1]
+    return output
+
+
+def _actions_url() -> str | None:
+    cfg = _load_cloud_links()
+    url = cfg.get("actions_url") or ""
+    if url:
+        return url
+    repo_url = cfg.get("repo_url") or _derive_repo_url()
+    if not repo_url:
+        return None
+    return f"{repo_url}/actions/workflows/daily_sync.yml"
+
+
 @st.cache_data(ttl=3600)
 def load_universe() -> pd.DataFrame:
     df = build_universe()
@@ -94,6 +132,12 @@ with st.sidebar:
     st.header("Controls")
     run_now = st.button("Run Daily Refresh", use_container_width=True)
     st.caption("Fetches latest prices and recomputes scores.")
+
+    cloud_url = _actions_url()
+    if cloud_url:
+        st.link_button("Run Cloud Refresh", cloud_url, use_container_width=True)
+    else:
+        st.caption("Set config/cloud.json to enable cloud refresh link.")
 
     st.divider()
     st.subheader("Account")
@@ -132,6 +176,14 @@ else:
 
 report = report or {}
 generated_at = report.get("generated_at")
+summary_stats = report.get("summary", {}) if report else {}
+
+cloud_status_parts = [f"Last cloud update: {format_timestamp(generated_at)}"]
+if summary_stats.get("data_ready_daily") is False:
+    cloud_status_parts.append("Daily watchlist: waiting")
+if summary_stats.get("data_ready_full") is False:
+    cloud_status_parts.append("Full universe: waiting")
+st.info(" | ".join(cloud_status_parts))
 
 top_picks = report.get("top_picks_combined", report.get("top_picks", []))
 top_picks_stocks = report.get("top_picks_stocks", [])

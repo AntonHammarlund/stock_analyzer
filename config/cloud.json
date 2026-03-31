@@ -1,0 +1,5 @@
+{
+  "repo_url": "",
+  "actions_url": "",
+  "notes": "Optional. Set repo_url or actions_url to enable the cloud refresh link in the app."
+}
