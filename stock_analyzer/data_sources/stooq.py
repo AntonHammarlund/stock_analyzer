@@ -249,7 +249,13 @@ def build_stooq_prices(
     config: StooqConfig,
     instrument_ids: Optional[Iterable[str]] = None,
 ) -> pd.DataFrame:
-    allowed = {str(value) for value in instrument_ids} if instrument_ids else None
+    if instrument_ids is None:
+        allowed = None
+    else:
+        try:
+            allowed = {str(value) for value in instrument_ids}
+        except TypeError:
+            allowed = None
     exclude = {item.lower() for item in config.exclude_asset_types}
     rows: List[dict] = []
 
