@@ -1,6 +1,6 @@
 {
-  "provider": "nasdaq_nordic+eodhd",
+  "provider": "nasdaq_nordic",
   "daily_required": true,
   "expected_freshness_days": 1,
-  "notes": "Daily prices and a large universe are sourced from Nasdaq Nordic files plus EODHD (API key)."
+  "notes": "Daily prices and a large universe are sourced from Nasdaq Nordic files. EODHD is disabled to keep the workflow free."
 }
