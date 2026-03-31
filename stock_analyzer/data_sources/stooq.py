@@ -71,6 +71,7 @@ def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
     cache_dir = DATA_DIR / "stooq"
     cache_dir.mkdir(parents=True, exist_ok=True)
     dest = cache_dir / _stooq_filename(market)
+    fallback = DATA_DIR / _stooq_filename(market)
 
     if dest.exists() and dest.stat().st_size > 0:
         age_days = (datetime.utcnow() - datetime.utcfromtimestamp(dest.stat().st_mtime)).days
@@ -83,6 +84,23 @@ def _download_zip(market: str, config: StooqConfig) -> Optional[Path]:
             return dest
         print(
             f"Local Stooq archive for {market} is stale ({age_days} days). "
+            "Download a fresh copy to continue."
+        )
+        if not config.download_enabled:
+            return None
+
+    if fallback.exists() and fallback.stat().st_size > 0:
+        age_days = (datetime.utcnow() - datetime.utcfromtimestamp(fallback.stat().st_mtime)).days
+        if age_days <= config.cache_ttl_days:
+            print(f"Using Stooq archive from data/ for {market}.")
+            return fallback
+        if config.allow_stale_local:
+            print(
+                f"Using stale Stooq archive from data/ for {market} ({age_days} days old)."
+            )
+            return fallback
+        print(
+            f"Local Stooq archive in data/ for {market} is stale ({age_days} days). "
             "Download a fresh copy to continue."
         )
         if not config.download_enabled:

@@ -16,5 +16,5 @@
     "https://stooq.com/db/h/",
     "https://stooq.com/db/h/db/d/?b="
   ],
-  "notes": "Uses Stooq bulk daily ASCII ZIPs. If download fails, place d_{market}_txt.zip in data/stooq/."
+  "notes": "Stooq downloads disabled; uses local ZIPs if present (data/ or data/stooq)."
 }

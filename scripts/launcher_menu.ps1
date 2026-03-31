@@ -52,6 +52,12 @@ function Show-Menu {
     Write-Host ""
 }
 
+function Get-AlphaVantageKey {
+    $key = $env:ALPHAVANTAGE_API_KEY
+    if (-not $key) { $key = $env:alphavantage_api_key }
+    return $key
+}
+
 function Get-ActiveUserId {
     $usersFile = Join-Path $projectRoot "data\users.json"
     if (-not (Test-Path $usersFile)) {
@@ -84,6 +90,11 @@ while ($true) {
         }
         "2" {
             Write-Host "Running data sync + daily pipeline..." -ForegroundColor Green
+            $alphaKey = Get-AlphaVantageKey
+            if (-not $alphaKey) {
+                Write-Host "Alpha Vantage API key missing. Set ALPHAVANTAGE_API_KEY to enable free universe + watchlist." -ForegroundColor Yellow
+                Write-Host "Example: `$env:ALPHAVANTAGE_API_KEY=`"your-key`"" -ForegroundColor Yellow
+            }
             & $python scripts\run_daily.py --sync-watchlist --sync-data --force
             Read-Host "Press Enter to continue"
         }
