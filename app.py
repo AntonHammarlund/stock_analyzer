@@ -316,7 +316,7 @@ with tab_top:
             hover_data=["confidence", "risk_score", "horizon"],
         )
         fig.update_layout(xaxis_title="Score", yaxis_title="", height=420)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=f"chart-{section_title}")
 
         display_cols = [
             col
