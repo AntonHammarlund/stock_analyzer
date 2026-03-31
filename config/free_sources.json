@@ -24,7 +24,7 @@
         "rate_limit_sleep_sec": 1
       },
       "avanza": {
-        "enabled": false,
+        "enabled": true,
         "notes": "Uses config/avanza.json credentials and chart data."
       }
     },
