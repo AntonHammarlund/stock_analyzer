@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "markets": ["us", "world", "uk", "jp", "hk", "pl", "hu"],
+  "timeout_sec": 60,
+  "history_days": 365,
+  "max_instruments": 5000,
+  "exclude_asset_types": ["etf"],
+  "cache_ttl_days": 1,
+  "base_urls": [
+    "https://static.stooq.com/db/h/",
+    "https://stooq.com/db/h/db/d/?b="
+  ],
+  "notes": "Uses Stooq bulk daily ASCII ZIPs. If download fails, place d_{market}_txt.zip in data/stooq/."
+}

@@ -17,6 +17,7 @@ from stock_analyzer.data_sources.nasdaq_nordic import (
     build_eod_prices,
     build_reference_universe,
 )
+from stock_analyzer.data_sources.stooq import StooqConfig, build_stooq_prices, build_stooq_universe
 from stock_analyzer.data_sources.universe_import import IMPORT_FILE, OUTPUT_COLUMNS
 from stock_analyzer.paths import CONFIG_DIR, DATA_DIR
 from stock_analyzer.utils import read_json
@@ -115,6 +116,33 @@ def _load_nasdaq_config() -> NasdaqNordicConfig | None:
     )
 
 
+def _load_stooq_config(keep_days: int) -> StooqConfig | None:
+    cfg = _load_json(CONFIG_DIR / "stooq.json")
+    if not cfg:
+        return None
+    if cfg.get("enabled") is False:
+        return None
+    markets = cfg.get("markets") or ["us", "world"]
+    timeout_sec = int(cfg.get("timeout_sec", 60))
+    history_days = int(cfg.get("history_days", keep_days))
+    max_instruments = int(cfg.get("max_instruments", 5000))
+    exclude_asset_types = cfg.get("exclude_asset_types") or ["etf"]
+    cache_ttl_days = int(cfg.get("cache_ttl_days", 1))
+    base_urls = cfg.get("base_urls")
+    stooq_cfg = StooqConfig(
+        enabled=True,
+        markets=markets,
+        timeout_sec=timeout_sec,
+        history_days=history_days,
+        max_instruments=max_instruments,
+        exclude_asset_types=exclude_asset_types,
+        cache_ttl_days=cache_ttl_days,
+    )
+    if base_urls:
+        stooq_cfg.base_urls = base_urls
+    return stooq_cfg
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sync daily universe + prices from external providers.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing import files.")
@@ -134,6 +162,19 @@ def main() -> None:
     universe_frames: List[pd.DataFrame] = []
     price_frames: List[pd.DataFrame] = []
     sources: List[str] = []
+
+    stooq_cfg = _load_stooq_config(keep_days)
+    if stooq_cfg:
+        stooq_universe = build_stooq_universe(stooq_cfg)
+        if not stooq_universe.empty:
+            universe_frames.append(stooq_universe)
+            sources.append("stooq_universe")
+            stooq_prices = build_stooq_prices(stooq_cfg, stooq_universe["instrument_id"])
+            if not stooq_prices.empty:
+                price_frames.append(stooq_prices)
+                sources.append("stooq_prices")
+        else:
+            print("Stooq enabled but no universe rows were built.")
 
     if not args.no_nasdaq:
         nasdaq_cfg = _load_nasdaq_config()
