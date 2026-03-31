@@ -93,6 +93,13 @@ def _load_cloud_links() -> dict:
     return {}
 
 
+def _avanza_enabled() -> bool:
+    cfg = read_json(CONFIG_DIR / "avanza.json")
+    if not isinstance(cfg, dict):
+        return False
+    return bool(cfg.get("enabled", False))
+
+
 def _derive_repo_url() -> str | None:
     try:
         output = subprocess.check_output(
@@ -496,7 +503,10 @@ with tab_portfolio:
     add_mode = st.radio("Add method", ["Search", "Manual"], horizontal=True)
 
     if add_mode == "Search":
-        search_source = st.radio("Search source", ["Local", "Avanza"], horizontal=True)
+        search_options = ["Local"]
+        if _avanza_enabled():
+            search_options.append("Avanza")
+        search_source = st.radio("Search source", search_options, horizontal=True)
 
         if search_source == "Local":
             universe_df = load_universe()
@@ -540,7 +550,7 @@ with tab_portfolio:
                     save_portfolio(holdings, active_user_id)
                     st.success("Holding added.")
                     st.rerun()
-        else:
+        elif search_source == "Avanza":
             search = st.text_input("Search Avanza by name, ISIN, or ticker", key="avanza_search")
             results = []
             reason = None
@@ -579,6 +589,8 @@ with tab_portfolio:
                         save_portfolio(holdings, active_user_id)
                         st.success("Holding added from Avanza.")
                         st.rerun()
+        else:
+            st.caption("Avanza search is disabled to avoid requiring login credentials.")
     else:
         with st.form("add_holding_manual"):
             instrument_id = st.text_input("Instrument ID")

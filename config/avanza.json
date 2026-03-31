@@ -1,5 +1,5 @@
 {
-  "enabled": true,
+  "enabled": false,
   "username_env": "AVANZA_USERNAME",
   "password_env": "AVANZA_PASSWORD",
   "totp_env": "AVANZA_TOTP_SECRET",
