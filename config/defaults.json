@@ -20,5 +20,20 @@
   "max_price_age_days": 1,
   "max_sample_instruments": 500,
   "stability_penalty": 0.15,
-  "confidence_gate": 0.3
+  "confidence_gate": 0.3,
+  "momentum_weight_base": 0.55,
+  "momentum_weight_risk_scale": 0.15,
+  "momentum_weight_min": 0.5,
+  "momentum_weight_max": 0.7,
+  "ml_weight_base": 0.1,
+  "ml_weight_scale": 0.4,
+  "confidence_weight_quant": 0.5,
+  "confidence_weight_ml_conf": 0.3,
+  "confidence_weight_risk": 0.2,
+  "expected_return_scale": 0.2,
+  "optimization_horizon_days": 90,
+  "optimization_lookback_days": 365,
+  "optimization_max_instruments": 250,
+  "optimization_min_improvement": 0.01,
+  "reasoning_mode": "heuristic"
 }

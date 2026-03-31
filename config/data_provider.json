@@ -1,6 +1,6 @@
 {
-  "provider": "none",
+  "provider": "nasdaq_nordic+eodhd",
   "daily_required": true,
   "expected_freshness_days": 1,
-  "notes": "Configure a licensed data provider for daily prices and thousands of instruments."
+  "notes": "Daily prices and a large universe are sourced from Nasdaq Nordic files plus EODHD (API key)."
 }

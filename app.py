@@ -15,6 +15,7 @@ from stock_analyzer.users import (
 from stock_analyzer.universe import build_universe
 from stock_analyzer.data_sources.price_data import load_prices
 from stock_analyzer.data_sources.universe_import import ImportedUniverseSource
+from stock_analyzer.config import load_config
 
 st.set_page_config(page_title="Stock Analyzer", layout="wide")
 

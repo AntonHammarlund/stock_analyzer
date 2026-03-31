@@ -42,11 +42,13 @@ function Show-Menu {
     Write-Host "Stock Analyzer" -ForegroundColor Cyan
     Write-Host "================" -ForegroundColor Cyan
     Write-Host "1) Launch Web App (Streamlit)"
-    Write-Host "2) Run Daily Pipeline"
-    Write-Host "3) Generate ML Stub Scores"
-    Write-Host "4) Open Latest Report"
-    Write-Host "5) Open Portfolio File"
-    Write-Host "6) Exit"
+    Write-Host "2) Run Data Sync + Daily Pipeline"
+    Write-Host "3) Install Daily Automation"
+    Write-Host "4) Remove Daily Automation"
+    Write-Host "5) Generate ML Stub Scores"
+    Write-Host "6) Open Latest Report"
+    Write-Host "7) Open Portfolio File"
+    Write-Host "8) Exit"
     Write-Host ""
 }
 
@@ -81,16 +83,26 @@ while ($true) {
             & $python -m streamlit run app.py
         }
         "2" {
-            Write-Host "Running daily pipeline..." -ForegroundColor Green
-            & $python scripts\run_daily.py --force
+            Write-Host "Running data sync + daily pipeline..." -ForegroundColor Green
+            & $python scripts\run_daily.py --sync-data --force
             Read-Host "Press Enter to continue"
         }
         "3" {
+            Write-Host "Installing daily automation..." -ForegroundColor Green
+            & powershell -ExecutionPolicy Bypass -File scripts\install_scheduler.ps1
+            Read-Host "Press Enter to continue"
+        }
+        "4" {
+            Write-Host "Removing daily automation..." -ForegroundColor Green
+            & powershell -ExecutionPolicy Bypass -File scripts\remove_scheduler.ps1
+            Read-Host "Press Enter to continue"
+        }
+        "5" {
             Write-Host "Generating ML stub scores..." -ForegroundColor Green
             & $python scripts\run_ml_stub.py
             Read-Host "Press Enter to continue"
         }
-        "4" {
+        "6" {
             $report = Join-Path $projectRoot "reports\latest_report.json"
             if (Test-Path $report) {
                 Start-Process $report
@@ -99,7 +111,7 @@ while ($true) {
                 Read-Host "Press Enter to continue"
             }
         }
-        "5" {
+        "7" {
             $userId = Get-ActiveUserId
             $portfolio = Join-Path $projectRoot ("data\portfolios\" + $userId + ".json")
             if (Test-Path $portfolio) {
@@ -109,7 +121,7 @@ while ($true) {
                 Read-Host "Press Enter to continue"
             }
         }
-        "6" { break }
+        "8" { break }
         Default {
             Write-Host "Invalid selection." -ForegroundColor Yellow
             Start-Sleep -Seconds 1

@@ -8,11 +8,23 @@ from ..paths import DATA_DIR
 from ..config import load_config
 
 SAMPLE_PRICES = DATA_DIR / "sample_prices.csv"
+IMPORT_PRICES = DATA_DIR / "prices_import.csv"
 
 
 def load_prices(universe: pd.DataFrame, instrument_ids: Optional[Iterable[str]] = None) -> pd.DataFrame:
+    if IMPORT_PRICES.exists() and IMPORT_PRICES.stat().st_size > 0:
+        df = pd.read_csv(IMPORT_PRICES)
+        df = _ensure_columns(df)
+        return _filter_instruments(df, instrument_ids)
+
+    config = load_config()
+    require_import = bool(config.get("require_imported_universe", True))
+    if require_import:
+        return _ensure_columns(pd.DataFrame())
+
     if SAMPLE_PRICES.exists():
         df = pd.read_csv(SAMPLE_PRICES)
+        df = _ensure_columns(df)
         return _filter_instruments(df, instrument_ids)
     return _generate_sample_prices(universe, instrument_ids)
 
@@ -22,6 +34,15 @@ def _filter_instruments(df: pd.DataFrame, instrument_ids: Optional[Iterable[str]
         return df
     ids = {str(value) for value in instrument_ids}
     return df[df["instrument_id"].astype(str).isin(ids)]
+
+
+def _ensure_columns(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame(columns=["instrument_id", "date", "close"])
+    for column in ("instrument_id", "date", "close"):
+        if column not in df.columns:
+            df[column] = pd.NA
+    return df
 
 
 def _generate_sample_prices(

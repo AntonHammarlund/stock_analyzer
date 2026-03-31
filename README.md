@@ -32,6 +32,36 @@ Run once to generate or refresh outputs:
 python scripts/run_daily.py
 ```
 
+To sync data before the daily run:
+
+```bash
+python scripts/run_daily.py --sync-data
+```
+
+## Automatic daily runs (Windows)
+You can install a scheduled task that runs hourly and triggers the daily pipeline when it is due:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install_scheduler.ps1
+```
+
+Remove it with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\remove_scheduler.ps1
+```
+
+## Cloud scheduling (free, wakes on visit)
+If you host the app on Streamlit Community Cloud (free) it will sleep when idle, but you can still
+run scheduled jobs with GitHub Actions:
+
+1. Create a GitHub repo and push this project.
+2. Add the secret `EODHD_API_TOKEN` (Settings → Secrets and variables → Actions) if you want EODHD data.
+3. The workflow in `.github/workflows/daily_sync.yml` runs daily at 06:00 Stockholm time, syncing data
+   and committing `data/universe_import.csv`, `data/prices_import.csv`, and `reports/latest_report.json`.
+
+Streamlit will wake when you visit, and it will render the latest committed outputs.
+
 ## ML stub (local testing)
 Generate local ML scores to simulate off-host output:
 
@@ -79,6 +109,23 @@ The pipeline will warn and pause summaries if the imported universe is below the
 
 Daily summaries also require fresh price data. If the latest price date is older than
 `max_price_age_days`, summaries are withheld until the data is refreshed.
+
+## Daily data sync (Nasdaq Nordic + EODHD)
+This project can ingest both Nasdaq Nordic files and EODHD data into the import files the app uses:
+
+1. Download the Nasdaq Nordic reference and EOD files daily.
+2. Update `config/nasdaq_nordic.json` with those file paths (or place them in `data/`).
+3. Set your EODHD token in an environment variable (default `EODHD_API_TOKEN`) and edit
+   `config/eodhd.json` to list the exchanges you want.
+4. Run the sync script:
+
+```powershell
+python scripts/sync_data.py
+```
+
+The script updates `data/universe_import.csv` and `data/prices_import.csv`, merging both sources and
+keeping the most recent `price_history_days` of prices. The daily pipeline will only publish summaries
+when the imported universe is large enough and price data is within the freshness window.
 
 ## Data provider configuration
 Set your data provider in `config/data_provider.json`. The project expects a licensed, daily-updated

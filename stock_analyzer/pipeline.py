@@ -60,17 +60,59 @@ def run_daily(user_id: str | None = None) -> Dict:
     execution_host = summarize_host(select_host())
     ml_host = summarize_host(select_host("remote_ml", require_endpoint=False))
 
+    require_import = bool(config.get("require_imported_universe", True))
+    min_imported = int(config.get("min_imported_universe_count", 0))
+    max_price_age = int(config.get("max_price_age_days", 1))
+    expected_return_scale = float(config.get("expected_return_scale", 0.2))
+    expected_horizon_days = int(config.get("projection_days", 90))
+
     imported_universe = ImportedUniverseSource().fetch()
+    imported_count = int(len(imported_universe))
     universe = attach_universe_metadata(build_universe())
     if universe.empty:
         warnings.append("Universe is empty; no instruments available.")
     prices = load_prices(universe)
-    if prices.empty:
+
+    prices_as_of = None
+    if not prices.empty and "date" in prices.columns:
+        prices_as_of = prices["date"].max()
+
+    price_age_days = None
+    if prices_as_of:
+        try:
+            prices_date = pd.to_datetime(prices_as_of).date()
+            price_age_days = (datetime.now(timezone.utc).date() - prices_date).days
+        except Exception:
+            price_age_days = None
+
+    data_ready = True
+    if require_import and imported_count < min_imported:
+        warnings.append(
+            f"Imported universe too small ({imported_count}); expected at least {min_imported} instruments."
+        )
+        data_ready = False
+
+    if require_import and prices.empty:
         warnings.append("Price data is empty; cannot compute features.")
+        data_ready = False
+
+    if require_import and price_age_days is not None and price_age_days > max_price_age:
+        warnings.append(
+            f"Price data is stale ({price_age_days} days old); expected <= {max_price_age}."
+        )
+        data_ready = False
+        prices = prices.head(0)
+
+    if not data_ready:
+        prices = prices.head(0)
+
+    if prices.empty and not require_import:
+        warnings.append("Price data is empty; cannot compute features.")
+
     features = compute_features(prices)
     if features.empty:
         warnings.append("Feature set is empty; check price inputs.")
-    quant_scores = score_quant(features)
+    quant_scores = score_quant(features, config=config)
     if quant_scores.empty:
         warnings.append("Quant scores are empty; pipeline will be sparse.")
     ml_scores, ml_meta = load_ml_scores_with_meta()
@@ -88,7 +130,7 @@ def run_daily(user_id: str | None = None) -> Dict:
     elif ml_meta.get("source") == "cache" and ml_meta.get("status") == "stale":
         notes.append("Using stale ML cache; remote refresh unavailable.")
 
-    combined = combine_scores(quant_scores, ml_scores)
+    combined = combine_scores(quant_scores, ml_scores, config=config)
     combined = combined.merge(universe, on="instrument_id", how="left")
     if combined.empty:
         warnings.append("No combined scores produced; report will be empty.")
@@ -98,19 +140,9 @@ def run_daily(user_id: str | None = None) -> Dict:
 
     combined = combined[combined["asset_type"] != "etf"]
     candidate_rows = int(len(combined))
-
-    require_import = bool(config.get("require_imported_universe", True))
-    min_imported = int(config.get("min_imported_universe_count", 0))
-    max_price_age = int(config.get("max_price_age_days", 1))
-    imported_count = int(len(imported_universe))
-    data_ready = True
-    if require_import and imported_count < min_imported:
-        warnings.append(
-            f"Imported universe too small ({imported_count}); expected at least {min_imported} instruments."
-        )
+    if require_import and not data_ready:
         combined = combined.head(0)
         candidate_rows = 0
-        data_ready = False
 
     confidence_gate = float(config.get("confidence_gate", 0.55))
     confidence_gate = min(max(confidence_gate, 0.0), 1.0)
@@ -143,6 +175,7 @@ def run_daily(user_id: str | None = None) -> Dict:
             ml_score = _safe_float(row.get("ml_score"), 0.5)
             confidence = _safe_float(row.get("confidence"), 0.0)
             final_score = _safe_float(row.get("final_score"), 0.0)
+            expected_change = (final_score - 0.5) * 2 * expected_return_scale
             picks.append(
                 {
                     "instrument_id": row["instrument_id"],
@@ -154,6 +187,8 @@ def run_daily(user_id: str | None = None) -> Dict:
                     "risk_score": round(risk_score, 4),
                     "momentum_score": round(momentum_score, 4),
                     "confidence": round(confidence, 4),
+                    "expected_change": round(expected_change, 4),
+                    "expected_horizon_days": expected_horizon_days,
                     "horizon": _estimate_horizon(risk_score, momentum_score),
                     "rationale": "Balanced momentum and risk profile.",
                 }
@@ -182,26 +217,6 @@ def run_daily(user_id: str | None = None) -> Dict:
     universe_as_of = None
     if not universe.empty and "as_of" in universe.columns:
         universe_as_of = universe["as_of"].max()
-
-    prices_as_of = None
-    if not prices.empty and "date" in prices.columns:
-        prices_as_of = prices["date"].max()
-
-    price_age_days = None
-    if prices_as_of:
-        try:
-            prices_date = pd.to_datetime(prices_as_of).date()
-            price_age_days = (datetime.now(timezone.utc).date() - prices_date).days
-        except Exception:
-            price_age_days = None
-
-    if require_import and price_age_days is not None and price_age_days > max_price_age:
-        warnings.append(
-            f"Price data is stale ({price_age_days} days old); expected <= {max_price_age}."
-        )
-        combined = combined.head(0)
-        candidate_rows = 0
-        data_ready = False
 
     if require_import and not data_ready:
         if imported_count < min_imported:
@@ -243,6 +258,8 @@ def run_daily(user_id: str | None = None) -> Dict:
         "top_stocks_count": int(len(top_picks_stocks)),
         "top_bonds_count": int(len(top_picks_bonds)),
         "confidence_gate": confidence_gate,
+        "expected_return_scale": expected_return_scale,
+        "expected_horizon_days": expected_horizon_days,
     }
 
     report = build_report(

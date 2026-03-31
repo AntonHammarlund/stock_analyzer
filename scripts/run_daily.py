@@ -1,6 +1,7 @@
 import argparse
 import sys
 from pathlib import Path
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -34,6 +35,11 @@ def main() -> None:
         action="store_true",
         help="Print the last recorded run status and exit.",
     )
+    parser.add_argument(
+        "--sync-data",
+        action="store_true",
+        help="Run data sync (Nasdaq Nordic + EODHD) before the daily pipeline.",
+    )
     args = parser.parse_args()
 
     config = load_config()
@@ -47,6 +53,13 @@ def main() -> None:
         print(f"Last status: {run_state.get('last_status', 'n/a')}")
         print(f"Last run id: {run_state.get('last_run_id', 'n/a')}")
         return
+
+    if args.sync_data:
+        sync_script = ROOT / "scripts" / "sync_data.py"
+        if sync_script.exists():
+            subprocess.run([sys.executable, str(sync_script)], check=False)
+        else:
+            print("Sync script not found; skipping data sync.")
 
     if not args.force and not should_run_daily(last_run, daily_hour, timezone):
         print("Daily run skipped; schedule not due yet.")

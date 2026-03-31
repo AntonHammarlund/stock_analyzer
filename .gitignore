@@ -12,9 +12,13 @@ __pycache__/
 /data/*.csv
 /data/*.json
 /data/portfolios/*.json
-/data/universe_import.csv
 /reports/*.json
 /reports/*.html
+
+# Keep core synced outputs in git (for cloud hosting)
+!data/universe_import.csv
+!data/prices_import.csv
+!reports/latest_report.json
 
 # Streamlit
 .streamlit/

@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "reference_file": "data/nasdaq_reference.csv",
+  "eod_file": "data/nasdaq_eod.csv",
+  "delimiter": ";",
+  "reference_mapping": {},
+  "eod_mapping": {},
+  "notes": "Download the Nasdaq Nordic reference and EOD files daily and point these paths to them. If your columns differ, map them here."
+}

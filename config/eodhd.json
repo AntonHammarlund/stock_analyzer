@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "api_token_env": "EODHD_API_TOKEN",
+  "api_token": "",
+  "timeout_sec": 30,
+  "exchanges": [
+    {
+      "code": "US",
+      "asset_type": "stock"
+    }
+  ],
+  "notes": "Set api_token_env to the environment variable containing your EODHD token. Add exchange codes you want to ingest."
+}
