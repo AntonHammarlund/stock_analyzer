@@ -1,5 +1,6 @@
 {
-  "repo_url": "",
-  "actions_url": "",
-  "notes": "Optional. Set repo_url or actions_url to enable the cloud refresh link in the app."
+  "repo_url": "https://github.com/AntonHammarlund/stock_analyzer",
+  "actions_url": "https://github.com/AntonHammarlund/stock_analyzer/actions/workflows/daily_sync.yml",
+  "app_url": "https://stockanalyzer-jxdmcjdowylckszw2afhmy.streamlit.app/",
+  "notes": "Cloud links for quick access."
 }

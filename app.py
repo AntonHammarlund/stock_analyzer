@@ -105,6 +105,12 @@ def _actions_url() -> str | None:
     return f"{repo_url}/actions/workflows/daily_sync.yml"
 
 
+def _app_url() -> str | None:
+    cfg = _load_cloud_links()
+    url = cfg.get("app_url") or ""
+    return url or None
+
+
 @st.cache_data(ttl=3600)
 def load_universe() -> pd.DataFrame:
     df = build_universe()
@@ -138,6 +144,10 @@ with st.sidebar:
         st.link_button("Run Cloud Refresh", cloud_url, use_container_width=True)
     else:
         st.caption("Set config/cloud.json to enable cloud refresh link.")
+
+    app_url = _app_url()
+    if app_url:
+        st.link_button("Open Live App", app_url, use_container_width=True)
 
     st.divider()
     st.subheader("Account")
