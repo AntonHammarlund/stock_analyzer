@@ -10,6 +10,8 @@ from .config import load_config
 from .universe import build_universe, attach_universe_metadata
 from .data_sources.price_data import load_prices
 from .data_sources.universe_import import ImportedUniverseSource
+from .data_sources.watchlist import build_watchlist_universe
+from .data_sources.watchlist_prices import load_watchlist_prices
 from .feature_store import compute_features
 from .models.quant import score_quant
 from .models.ml_proxy import load_ml_scores_with_meta
@@ -48,6 +50,17 @@ def _filter_assets(df: pd.DataFrame, asset_types: list[str]) -> pd.DataFrame:
     return df[df["asset_type"].isin(asset_types)]
 
 
+def _price_age_days(prices: pd.DataFrame) -> int | None:
+    if prices.empty or "date" not in prices.columns:
+        return None
+    try:
+        prices_as_of = prices["date"].max()
+        prices_date = pd.to_datetime(prices_as_of).date()
+        return (datetime.now(timezone.utc).date() - prices_date).days
+    except Exception:
+        return None
+
+
 def run_daily(user_id: str | None = None) -> Dict:
     ensure_dirs()
     config = load_config()
@@ -63,6 +76,9 @@ def run_daily(user_id: str | None = None) -> Dict:
     require_import = bool(config.get("require_imported_universe", True))
     min_imported = int(config.get("min_imported_universe_count", 0))
     max_price_age = int(config.get("max_price_age_days", 1))
+    max_large_age = int(config.get("max_large_price_age_days", max_price_age))
+    watchlist_min = int(config.get("watchlist_min_size", 0))
+    max_watchlist_age = int(config.get("max_watchlist_price_age_days", 1))
     expected_return_scale = float(config.get("expected_return_scale", 0.2))
     expected_horizon_days = int(config.get("projection_days", 90))
 
@@ -73,17 +89,8 @@ def run_daily(user_id: str | None = None) -> Dict:
         warnings.append("Universe is empty; no instruments available.")
     prices = load_prices(universe)
 
-    prices_as_of = None
-    if not prices.empty and "date" in prices.columns:
-        prices_as_of = prices["date"].max()
-
-    price_age_days = None
-    if prices_as_of:
-        try:
-            prices_date = pd.to_datetime(prices_as_of).date()
-            price_age_days = (datetime.now(timezone.utc).date() - prices_date).days
-        except Exception:
-            price_age_days = None
+    prices_as_of = prices["date"].max() if not prices.empty and "date" in prices.columns else None
+    price_age_days = _price_age_days(prices)
 
     data_ready = True
     if require_import and imported_count < min_imported:
@@ -96,9 +103,9 @@ def run_daily(user_id: str | None = None) -> Dict:
         warnings.append("Price data is empty; cannot compute features.")
         data_ready = False
 
-    if require_import and price_age_days is not None and price_age_days > max_price_age:
+    if require_import and price_age_days is not None and price_age_days > max_large_age:
         warnings.append(
-            f"Price data is stale ({price_age_days} days old); expected <= {max_price_age}."
+            f"Price data is stale ({price_age_days} days old); expected <= {max_large_age}."
         )
         data_ready = False
         prices = prices.head(0)
@@ -199,6 +206,40 @@ def run_daily(user_id: str | None = None) -> Dict:
     top_picks_stocks = _build_picks(top_stocks)
     top_picks_bonds = _build_picks(top_bonds)
 
+    watchlist = build_watchlist_universe(universe)
+    watchlist_count = int(len(watchlist))
+    watchlist_prices = load_watchlist_prices(
+        watchlist["instrument_id"] if not watchlist.empty else None
+    )
+    watchlist_price_age = _price_age_days(watchlist_prices)
+
+    watchlist_ready = True
+    if watchlist_count < watchlist_min:
+        watchlist_ready = False
+    if watchlist_prices.empty:
+        watchlist_ready = False
+    if watchlist_price_age is not None and watchlist_price_age > max_watchlist_age:
+        watchlist_ready = False
+
+    watchlist_combined = pd.DataFrame()
+    if watchlist_ready:
+        watch_features = compute_features(watchlist_prices)
+        watch_quant = score_quant(watch_features, config=config) if not watch_features.empty else pd.DataFrame()
+        watch_combined = combine_scores(watch_quant, ml_scores, config=config)
+        watch_combined = watch_combined.merge(watchlist, on="instrument_id", how="left")
+        if "asset_type" in watch_combined.columns:
+            watch_combined["asset_type"] = (
+                watch_combined["asset_type"].fillna("").astype(str).str.lower()
+            )
+        watch_combined = watch_combined[watch_combined["asset_type"] != "etf"]
+        if "confidence" in watch_combined.columns:
+            watch_combined = watch_combined[watch_combined["confidence"] >= confidence_gate]
+        watchlist_combined = watch_combined.sort_values("final_score", ascending=False)
+
+    top_picks_watchlist = (
+        _build_picks(watchlist_combined.head(top_n)) if watchlist_ready else []
+    )
+
     active_user_id = user_id or get_active_user_id()
     portfolio = portfolio_summary(load_portfolio(active_user_id))
 
@@ -218,36 +259,41 @@ def run_daily(user_id: str | None = None) -> Dict:
     if not universe.empty and "as_of" in universe.columns:
         universe_as_of = universe["as_of"].max()
 
+    if watchlist_ready:
+        daily_outlook = daily_summary()
+    else:
+        daily_outlook = "Daily watchlist summary withheld until watchlist prices are refreshed."
+
     if require_import and not data_ready:
         if imported_count < min_imported:
-            outlook = {
-                "daily": "Market summary withheld until the full imported universe is available.",
-                "deep": "Load the larger universe to enable the 1-3 week and 1-5 year trend summaries.",
-            }
+            deep_outlook = "Full market summary withheld until the larger universe is available."
         else:
-            outlook = {
-                "daily": "Market summary withheld because price data is stale.",
-                "deep": "Refresh daily prices from your data provider to enable trend summaries.",
-            }
+            deep_outlook = "Full market summary withheld because large-universe prices are stale."
     else:
-        outlook = {
-            "daily": daily_summary(),
-            "deep": deep_summary(),
-        }
+        deep_outlook = deep_summary()
+
+    outlook = {
+        "daily": daily_outlook,
+        "deep": deep_outlook,
+    }
 
     inputs = {
         "universe_as_of": universe_as_of,
         "prices_as_of": prices_as_of,
         "price_age_days": price_age_days,
+        "watchlist_price_age_days": watchlist_price_age,
         "ml": ml_meta,
     }
 
     summary = {
         "universe_count": int(len(universe)),
         "imported_universe_count": imported_count,
-        "data_ready": data_ready,
+        "data_ready_full": data_ready,
+        "data_ready_daily": watchlist_ready,
         "price_rows": int(len(prices)),
         "price_age_days": price_age_days,
+        "watchlist_count": watchlist_count,
+        "watchlist_price_age_days": watchlist_price_age,
         "feature_rows": int(len(features)),
         "quant_rows": int(len(quant_scores)),
         "ml_rows": int(len(ml_scores)),
@@ -275,6 +321,7 @@ def run_daily(user_id: str | None = None) -> Dict:
     report["top_picks_combined"] = top_picks
     report["top_picks_stocks"] = top_picks_stocks
     report["top_picks_bonds"] = top_picks_bonds
+    report["top_picks_watchlist"] = top_picks_watchlist
     report["active_user_id"] = active_user_id
     notification = notify_report(report)
     if notification.get("attempted"):

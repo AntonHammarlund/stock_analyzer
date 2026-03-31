@@ -62,6 +62,10 @@ run scheduled jobs with GitHub Actions:
 
 Streamlit will wake when you visit, and it will render the latest committed outputs.
 
+For the free watchlist sync, add these GitHub Actions secrets if you want the workflow to fetch prices:
+- `ALPHAVANTAGE_API_KEY`
+- `MARKETSTACK_API_KEY` (optional)
+
 ## ML stub (local testing)
 Generate local ML scores to simulate off-host output:
 
@@ -126,6 +130,36 @@ python scripts/sync_data.py
 The script updates `data/universe_import.csv` and `data/prices_import.csv`, merging both sources and
 keeping the most recent `price_history_days` of prices. The daily pipeline will only publish summaries
 when the imported universe is large enough and price data is within the freshness window.
+
+## Hybrid free mode (daily watchlist + periodic large universe)
+If you want everything free, use the hybrid mode:
+- **Daily watchlist** uses free APIs (small list, updated daily).
+- **Large universe** uses periodic CSV imports (not necessarily daily).
+
+### Watchlist setup
+1. Add instruments to `data/watchlist.csv` with columns:
+   `instrument_id`, `symbol`, `provider` (alpha_vantage or marketstack), `name`, `asset_type`, `ticker`, `currency`, `market`, `country`.
+2. Set your API keys in environment variables:
+
+```powershell
+$env:ALPHAVANTAGE_API_KEY="your-key"
+$env:MARKETSTACK_API_KEY="your-key"
+```
+
+3. Sync watchlist prices:
+
+```powershell
+python scripts/sync_watchlist.py
+```
+
+### Daily run with watchlist sync
+
+```powershell
+python scripts/run_daily.py --sync-watchlist --force
+```
+
+The GitHub Actions workflow also runs `scripts/sync_watchlist.py` daily and commits
+`data/watchlist.csv` and `data/prices_watchlist.csv`.
 
 ## Data provider configuration
 Set your data provider in `config/data_provider.json`. The project expects a licensed, daily-updated

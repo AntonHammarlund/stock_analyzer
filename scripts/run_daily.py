@@ -36,6 +36,11 @@ def main() -> None:
         help="Print the last recorded run status and exit.",
     )
     parser.add_argument(
+        "--sync-watchlist",
+        action="store_true",
+        help="Sync watchlist prices (free sources) before the daily pipeline.",
+    )
+    parser.add_argument(
         "--sync-data",
         action="store_true",
         help="Run data sync (Nasdaq Nordic + EODHD) before the daily pipeline.",
@@ -53,6 +58,13 @@ def main() -> None:
         print(f"Last status: {run_state.get('last_status', 'n/a')}")
         print(f"Last run id: {run_state.get('last_run_id', 'n/a')}")
         return
+
+    if args.sync_watchlist:
+        watch_script = ROOT / "scripts" / "sync_watchlist.py"
+        if watch_script.exists():
+            subprocess.run([sys.executable, str(watch_script)], check=False)
+        else:
+            print("Watchlist sync script not found; skipping.")
 
     if args.sync_data:
         sync_script = ROOT / "scripts" / "sync_data.py"

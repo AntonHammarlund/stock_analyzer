@@ -84,7 +84,7 @@ while ($true) {
         }
         "2" {
             Write-Host "Running data sync + daily pipeline..." -ForegroundColor Green
-            & $python scripts\run_daily.py --sync-data --force
+            & $python scripts\run_daily.py --sync-watchlist --sync-data --force
             Read-Host "Press Enter to continue"
         }
         "3" {

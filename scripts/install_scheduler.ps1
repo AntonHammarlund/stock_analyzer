@@ -42,7 +42,7 @@ if (-not $python) {
 }
 
 $taskName = "Stock Analyzer Daily"
-$command = "cmd /c `"cd /d `"$projectRoot`" && `"$python`" scripts\run_daily.py --sync-data`""
+$command = "cmd /c `"cd /d `"$projectRoot`" && `"$python`" scripts\run_daily.py --sync-watchlist --sync-data`""
 
 schtasks /Create /F /SC HOURLY /MO 1 /TN $taskName /TR $command | Out-Null
 Write-Host "Scheduled task '$taskName' created. It will run hourly and execute the daily pipeline when due." -ForegroundColor Green

@@ -1,6 +1,6 @@
 {
-  "provider": "nasdaq_nordic",
+  "provider": "hybrid_free",
   "daily_required": true,
   "expected_freshness_days": 1,
-  "notes": "Daily prices and a large universe are sourced from Nasdaq Nordic files. EODHD is disabled to keep the workflow free."
+  "notes": "Hybrid free mode: daily watchlist uses free APIs; large universe uses periodic CSV imports."
 }

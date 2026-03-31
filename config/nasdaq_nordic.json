@@ -1,9 +1,9 @@
 {
-  "enabled": true,
+  "enabled": false,
   "reference_file": "data/nasdaq_reference.csv",
   "eod_file": "data/nasdaq_eod.csv",
   "delimiter": ";",
   "reference_mapping": {},
   "eod_mapping": {},
-  "notes": "Download the Nasdaq Nordic reference and EOD files daily and point these paths to them. If your columns differ, map them here."
+  "notes": "Disabled for free mode. Enable only if you have licensed Nasdaq Nordic files."
 }

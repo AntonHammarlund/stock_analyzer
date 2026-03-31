@@ -1,0 +1,20 @@
+{
+  "watchlist": {
+    "enabled": true,
+    "file": "data/watchlist.csv",
+    "providers": {
+      "alpha_vantage": {
+        "enabled": true,
+        "api_key_env": "ALPHAVANTAGE_API_KEY",
+        "function": "TIME_SERIES_DAILY",
+        "outputsize": "compact"
+      },
+      "marketstack": {
+        "enabled": false,
+        "api_key_env": "MARKETSTACK_API_KEY",
+        "endpoint": "https://api.marketstack.com/v1/eod/latest"
+      }
+    },
+    "default_provider": "alpha_vantage"
+  }
+}

@@ -18,6 +18,8 @@ __pycache__/
 # Keep core synced outputs in git (for cloud hosting)
 !data/universe_import.csv
 !data/prices_import.csv
+!data/watchlist.csv
+!data/prices_watchlist.csv
 !reports/latest_report.json
 
 # Streamlit

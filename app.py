@@ -136,6 +136,7 @@ generated_at = report.get("generated_at")
 top_picks = report.get("top_picks_combined", report.get("top_picks", []))
 top_picks_stocks = report.get("top_picks_stocks", [])
 top_picks_bonds = report.get("top_picks_bonds", [])
+top_picks_watchlist = report.get("top_picks_watchlist", [])
 outlook = report.get("outlook", {})
 notes = report.get("notes", [])
 
@@ -146,6 +147,7 @@ st.sidebar.divider()
 st.sidebar.header("Status")
 st.sidebar.caption(f"Last report: {format_timestamp(generated_at)}")
 st.sidebar.caption(f"Top picks: {len(top_picks)}")
+st.sidebar.caption(f"Watchlist picks: {len(top_picks_watchlist)}")
 st.sidebar.caption(f"Holdings: {len(holdings)}")
 
 if not report:
@@ -158,6 +160,8 @@ tab_overview, tab_top, tab_outlook, tab_summary, tab_portfolio, tab_instrument =
 with tab_overview:
     st.subheader("Overview")
     top_df = pd.DataFrame(top_picks)
+    if top_df.empty and top_picks_watchlist:
+        top_df = pd.DataFrame(top_picks_watchlist)
 
     best_score = None
     avg_confidence = None
@@ -249,7 +253,9 @@ with tab_top:
             with st.expander("Rationales", expanded=False):
                 st.dataframe(filtered[["name", "rationale"]], use_container_width=True, hide_index=True)
 
-    sub_combined, sub_stocks, sub_bonds = st.tabs(["Combined", "Stocks", "Bonds"])
+    sub_combined, sub_stocks, sub_bonds, sub_watch = st.tabs(
+        ["Combined", "Stocks", "Bonds", "Watchlist (Daily)"]
+    )
 
     with sub_combined:
         render_picks("Combined Picks (No ETFs)", top_picks)
@@ -257,6 +263,8 @@ with tab_top:
         render_picks("Stock Picks", top_picks_stocks)
     with sub_bonds:
         render_picks("Bond Picks", top_picks_bonds)
+    with sub_watch:
+        render_picks("Daily Watchlist Picks", top_picks_watchlist)
 
 with tab_outlook:
     st.subheader("Market Outlook")
@@ -273,6 +281,9 @@ with tab_summary:
     st.subheader("Market Summary")
     universe_df = load_universe()
     imported_df = load_imported_universe()
+    summary_stats = report.get("summary", {}) if report else {}
+    watchlist_count = summary_stats.get("watchlist_count")
+    watchlist_price_age = summary_stats.get("watchlist_price_age_days")
     if universe_df.empty:
         st.info("Universe is empty; import instruments to see summary.")
     else:
@@ -281,8 +292,8 @@ with tab_summary:
 
         total_universe = len(universe_df)
         imported_count = len(imported_df)
-        summary_stats = report.get("summary", {}) if report else {}
-        data_ready = summary_stats.get("data_ready")
+        data_ready = summary_stats.get("data_ready_full")
+        watchlist_ready = summary_stats.get("data_ready_daily")
         price_age = summary_stats.get("price_age_days")
 
         coverage_pct = 0.0
@@ -299,7 +310,9 @@ with tab_summary:
         col4.metric("Price Age (days)", price_age if price_age is not None else "n/a")
 
         if data_ready is False:
-            st.warning("Data readiness checks failed. Load the full universe and daily prices to enable summaries.")
+            st.warning("Full-market data readiness checks failed. Load the larger universe and prices.")
+        if watchlist_ready is False:
+            st.info("Daily watchlist summary is waiting for fresh watchlist prices.")
 
         if not universe_df.empty and "asset_type" in universe_df.columns:
             type_counts = (
@@ -349,10 +362,11 @@ with tab_summary:
         "Short-term trends emphasize the last 1-3 weeks; long-term trends emphasize 1-5 years."
     )
 
-    summary_stats = report.get("summary", {}) if report else {}
     imported_count = summary_stats.get("imported_universe_count")
     if imported_count is not None:
         st.caption(f"Imported universe size: {imported_count}")
+    if watchlist_count is not None:
+        st.caption(f"Watchlist size: {watchlist_count} (price age: {watchlist_price_age} days)")
 
 with tab_portfolio:
     st.subheader("Portfolio")
