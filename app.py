@@ -31,14 +31,26 @@ st.markdown(
     """
     <style>
         :root {
-            --sand: #f4f1ec;
+            --sand: #e3dad1;
             --linen: #fbfaf7;
             --ink: #2f2a26;
             --muted: #6b635c;
+            --sidebar-button: #2f2a26;
+            --sidebar-button-text: #ffffff;
         }
         .main { background-color: var(--linen); color: var(--ink); }
         .block-container { padding-top: 1.5rem; padding-bottom: 2.5rem; }
         section[data-testid="stSidebar"] { background-color: var(--sand); }
+        section[data-testid="stSidebar"] * { color: var(--ink); }
+        section[data-testid="stSidebar"] .stButton > button,
+        section[data-testid="stSidebar"] .stLinkButton > a {
+            background-color: var(--sidebar-button);
+            color: var(--sidebar-button-text);
+        }
+        section[data-testid="stSidebar"] .stButton > button:hover,
+        section[data-testid="stSidebar"] .stLinkButton > a:hover {
+            filter: brightness(0.95);
+        }
         div[data-testid="stMetric"] {
             background: #ffffff;
             border: 1px solid #e7e1d8;
