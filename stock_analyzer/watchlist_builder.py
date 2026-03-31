@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Dict, Iterable, List
 
 import pandas as pd
@@ -75,6 +76,14 @@ def build_watchlist_if_needed(force: bool = False) -> pd.DataFrame:
 
     max_size = int(watch_cfg.get("max_size", 25))
     provider_default = watch_cfg.get("default_provider", "alpha_vantage")
+    alpha_env = (
+        watch_cfg.get("providers", {})
+        .get("alpha_vantage", {})
+        .get("api_key_env", "ALPHAVANTAGE_API_KEY")
+    )
+    if not os.getenv(alpha_env):
+        if watch_cfg.get("providers", {}).get("stooq", {}).get("enabled"):
+            provider_default = "stooq"
 
     universe = build_universe()
     universe_map = {}

@@ -26,6 +26,10 @@
       "avanza": {
         "enabled": false,
         "notes": "Uses config/avanza.json credentials and chart data."
+      },
+      "stooq": {
+        "enabled": true,
+        "notes": "Uses local Stooq ZIPs for watchlist symbols."
       }
     },
     "default_provider": "alpha_vantage"

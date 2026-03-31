@@ -20,6 +20,7 @@ from stock_analyzer.data_sources.avanza_client import (
 )
 from stock_analyzer.data_sources.watchlist import load_watchlist
 from stock_analyzer.watchlist_builder import build_watchlist_if_needed
+from stock_analyzer.data_sources.stooq import StooqConfig, build_stooq_prices
 from stock_analyzer.paths import DATA_DIR, CONFIG_DIR
 from stock_analyzer.utils import read_json
 
@@ -29,6 +30,28 @@ WATCHLIST_PRICES = DATA_DIR / "prices_watchlist.csv"
 def _load_config() -> Dict:
     cfg_path = CONFIG_DIR / "free_sources.json"
     return read_json(cfg_path)
+
+
+def _load_stooq_config() -> StooqConfig | None:
+    cfg = read_json(CONFIG_DIR / "stooq.json")
+    if not cfg or cfg.get("enabled") is False:
+        return None
+    return StooqConfig(
+        enabled=True,
+        markets=cfg.get("markets") or ["us", "world"],
+        timeout_sec=int(cfg.get("timeout_sec", 60)),
+        history_days=int(cfg.get("history_days", 365)),
+        max_instruments=int(cfg.get("max_instruments", 5000)),
+        exclude_asset_types=cfg.get("exclude_asset_types") or ["etf"],
+        cache_ttl_days=int(cfg.get("cache_ttl_days", 1)),
+        max_retries=int(cfg.get("max_retries", 3)),
+        backoff_sec=float(cfg.get("backoff_sec", 2.0)),
+        retry_statuses=cfg.get("retry_statuses") or [408, 429, 500, 502, 503, 504],
+        download_enabled=bool(cfg.get("download_enabled", False)),
+        allow_stale_local=bool(cfg.get("allow_stale_local", False)),
+        base_urls=cfg.get("base_urls")
+        or ["https://static.stooq.com/db/h/", "https://stooq.com/db/h/"],
+    )
 
 
 def _fetch_alpha_vantage(
@@ -161,6 +184,8 @@ def main() -> None:
     market_sleep = float(market_cfg.get("rate_limit_sleep_sec", 1))
 
     rows: List[Dict] = []
+    stooq_symbols: List[str] = []
+    stooq_cfg = _load_stooq_config()
     failed_symbols: List[str] = []
     max_size = int(watch_cfg.get("max_size", 25))
     if max_size > 0 and len(watchlist) > max_size:
@@ -174,22 +199,29 @@ def main() -> None:
         result = None
         source = provider
         try:
-            if provider == "marketstack" and market_enabled and market_key:
-                result = _fetch_marketstack(symbol, market_key, market_endpoint)
-                source = "marketstack"
-                if market_sleep:
-                    time.sleep(market_sleep)
-            elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
-                result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
-                source = "alpha_vantage"
-                if alpha_sleep:
-                    time.sleep(alpha_sleep)
-            elif provider == "avanza":
-                result = _fetch_avanza_prices(symbol)
-                source = "avanza"
+        if provider == "marketstack" and market_enabled and market_key:
+            result = _fetch_marketstack(symbol, market_key, market_endpoint)
+            source = "marketstack"
+            if market_sleep:
+                time.sleep(market_sleep)
+        elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
+            result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
+            source = "alpha_vantage"
+            if alpha_sleep:
+                time.sleep(alpha_sleep)
+        elif provider == "alpha_vantage" and alpha_enabled and not alpha_key and stooq_cfg:
+            stooq_symbols.append(symbol)
+            continue
+        elif provider == "avanza":
+            result = _fetch_avanza_prices(symbol)
+            source = "avanza"
         except Exception as exc:
             print(f"Fetch failed for {symbol} via {provider}: {exc}")
             failed_symbols.append(symbol)
+            continue
+
+        if provider == "stooq":
+            stooq_symbols.append(symbol)
             continue
 
         if not result:
@@ -209,8 +241,14 @@ def main() -> None:
             )
 
     if not rows:
-        print("No watchlist prices fetched. Check API keys and provider config.")
-        return
+        if stooq_symbols and stooq_cfg:
+            stooq_prices = build_stooq_prices(stooq_cfg, stooq_symbols)
+            if not stooq_prices.empty:
+                stooq_prices["source"] = "stooq_local"
+                rows.extend(stooq_prices.to_dict("records"))
+        if not rows:
+            print("No watchlist prices fetched. Check API keys and provider config.")
+            return
 
     new_df = pd.DataFrame(rows)
     if WATCHLIST_PRICES.exists() and not args.overwrite:

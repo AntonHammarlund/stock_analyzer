@@ -58,7 +58,18 @@ def _fetch_listing_status(api_key: str, state: str = "active") -> pd.DataFrame:
     response = requests.get(url, timeout=60)
     response.raise_for_status()
     text = response.text
+    stripped = text.lstrip()
+    if stripped.startswith("{"):
+        try:
+            payload = response.json()
+        except Exception:
+            payload = {"error": "invalid-json"}
+        note = payload.get("Note") or payload.get("Error Message") or payload
+        print(f"Alpha Vantage listing_status returned JSON: {note}")
+        return pd.DataFrame()
     df = pd.read_csv(StringIO(text))
+    if df.empty:
+        print("Alpha Vantage listing_status returned empty CSV.")
     return df
 
 
@@ -83,6 +94,9 @@ def build_alpha_vantage_universe(config: AlphaVantageConfig) -> Tuple[pd.DataFra
             "status": "status",
         }
     )
+    if "instrument_id" not in df.columns or "name" not in df.columns:
+        print("Alpha Vantage listing_status missing required columns.")
+        return pd.DataFrame(), "invalid-response"
     df["instrument_id"] = df["instrument_id"].astype(str)
     df["ticker"] = df["instrument_id"]
     df["asset_type"] = df["asset_type"].astype(str).str.lower()
@@ -159,6 +173,8 @@ def _fetch_time_series(symbol: str, api_key: str, outputsize: str) -> Optional[d
     response.raise_for_status()
     payload = response.json()
     if isinstance(payload, dict) and ("Note" in payload or "Error Message" in payload):
+        note = payload.get("Note") or payload.get("Error Message")
+        print(f"Alpha Vantage error for {symbol}: {note}")
         return None
     return payload
 
