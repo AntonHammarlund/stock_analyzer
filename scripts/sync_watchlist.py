@@ -65,6 +65,8 @@ def _fetch_alpha_vantage(
     response.raise_for_status()
     payload = response.json()
     if isinstance(payload, dict) and ("Note" in payload or "Error Message" in payload):
+        note = payload.get("Note") or payload.get("Error Message")
+        print(f"Alpha Vantage error for {symbol}: {note}")
         return None
     series = payload.get("Time Series (Daily)") or payload.get("Time Series (Daily)".lower())
     if not isinstance(series, dict) or not series:
