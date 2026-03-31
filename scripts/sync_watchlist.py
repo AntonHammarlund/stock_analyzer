@@ -211,25 +211,25 @@ def main() -> None:
         result = None
         source = provider
         try:
-        if provider == "marketstack" and market_enabled and market_key:
-            result = _fetch_marketstack(symbol, market_key, market_endpoint)
-            source = "marketstack"
-            if market_sleep:
-                time.sleep(market_sleep)
-        elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
-            result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
-            source = "alpha_vantage"
-            if alpha_sleep:
-                time.sleep(alpha_sleep)
-        elif provider == "alpha_vantage" and alpha_enabled and not alpha_key and stooq_cfg:
-            stooq_symbol = _to_stooq_symbol(symbol)
-            if stooq_symbol:
-                stooq_symbols.append(stooq_symbol)
-                stooq_map[stooq_symbol] = instrument_id
-            continue
-        elif provider == "avanza":
-            result = _fetch_avanza_prices(symbol)
-            source = "avanza"
+            if provider == "marketstack" and market_enabled and market_key:
+                result = _fetch_marketstack(symbol, market_key, market_endpoint)
+                source = "marketstack"
+                if market_sleep:
+                    time.sleep(market_sleep)
+            elif provider == "alpha_vantage" and alpha_enabled and alpha_key:
+                result = _fetch_alpha_vantage(symbol, alpha_key, alpha_function, alpha_outputsize)
+                source = "alpha_vantage"
+                if alpha_sleep:
+                    time.sleep(alpha_sleep)
+            elif provider == "alpha_vantage" and alpha_enabled and not alpha_key and stooq_cfg:
+                stooq_symbol = _to_stooq_symbol(symbol)
+                if stooq_symbol:
+                    stooq_symbols.append(stooq_symbol)
+                    stooq_map[stooq_symbol] = instrument_id
+                continue
+            elif provider == "avanza":
+                result = _fetch_avanza_prices(symbol)
+                source = "avanza"
         except Exception as exc:
             print(f"Fetch failed for {symbol} via {provider}: {exc}")
             failed_symbols.append(symbol)
