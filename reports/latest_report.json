@@ -1,6 +1,6 @@
 {
   "report_version": 2,
-  "generated_at": "2026-03-31T15:40:08.636680+00:00",
+  "generated_at": "2026-04-01T05:52:56.744808+00:00",
   "top_picks": [
     {
       "instrument_id": "a.us",
@@ -154,8 +154,8 @@
     }
   ],
   "outlook": {
-    "daily": "Calm-first daily summary for 2026-03-31: market conditions are neutral with stable volatility. Focus on long-term horizons.",
-    "deep": "Deep summary for 2026-03-31: regime appears stable. No major directional shift detected. Long-term investors should stay disciplined and review diversification."
+    "daily": "Calm-first daily summary for 2026-04-01: market conditions are neutral with stable volatility. Focus on long-term horizons.",
+    "deep": "Deep summary for 2026-04-01: regime appears stable. No major directional shift detected. Long-term investors should stay disciplined and review diversification."
   },
   "portfolio": {
     "risk": "No holdings added yet.",
@@ -163,14 +163,14 @@
     "concentration": 0.0
   },
   "notes": [
-    "Using stale ML cache; remote refresh unavailable."
+    "Remote ML endpoint not configured; using quant-only blend."
   ],
   "run": {
-    "run_id": "dfa73bf3aff94e1eb282e3668caa6d51",
+    "run_id": "e521e958840e49ec8368ae7c7a311cce",
     "status": "success",
-    "started_at": "2026-03-31T15:39:58.871160+00:00",
-    "finished_at": "2026-03-31T15:40:08.636680+00:00",
-    "duration_sec": 9.76,
+    "started_at": "2026-04-01T05:52:48.036158+00:00",
+    "finished_at": "2026-04-01T05:52:56.744518+00:00",
+    "duration_sec": 8.71,
     "execution_host": {
       "id": "local",
       "type": "local",
@@ -201,7 +201,7 @@
     "watchlist_price_age_days": 1,
     "feature_rows": 4972,
     "quant_rows": 4972,
-    "ml_rows": 12,
+    "ml_rows": 0,
     "candidate_rows": 4972,
     "filtered_out": 0,
     "top_picks_target": 10,
@@ -213,14 +213,23 @@
     "expected_horizon_days": 90
   },
   "inputs": {
-    "universe_as_of": "2026-03-31",
+    "universe_as_of": "2026-04-01",
     "prices_as_of": "NaT",
     "price_age_days": null,
     "watchlist_price_age_days": 1,
     "ml": {
-      "source": "cache",
-      "status": "stale",
-      "count": 12
+      "source": "remote",
+      "status": "no-endpoint",
+      "host": {
+        "id": "local",
+        "type": "local",
+        "enabled": true,
+        "selected_for": "remote_ml",
+        "fallback_used": true,
+        "fallback_reason": "No enabled host of type 'remote_ml'.",
+        "endpoint_configured": false
+      },
+      "count": 0
     }
   },
   "warnings": [],
@@ -534,88 +543,73 @@
       "instrument_id": "XOM",
       "name": "XOM",
       "asset_type": "",
-      "score": 0.7813,
-      "quant_score": 0.8125,
+      "score": 0.8569,
+      "quant_score": 0.8965,
       "ml_score": 0.5,
-      "risk_score": 0.5,
+      "risk_score": 0.7,
       "momentum_score": 1.0,
-      "confidence": 0.5062,
-      "expected_change": 0.1125,
+      "confidence": 0.5882,
+      "expected_change": 0.1427,
       "expected_horizon_days": 90,
-      "horizon": "1-3 years",
+      "horizon": "6-12 months",
       "rationale": "Balanced momentum and risk profile."
     },
     {
       "instrument_id": "JPM",
       "name": "JPM",
       "asset_type": "stock",
-      "score": 0.77,
-      "quant_score": 0.8,
+      "score": 0.6688,
+      "quant_score": 0.6875,
       "ml_score": 0.5,
-      "risk_score": 0.8,
+      "risk_score": 0.5,
       "momentum_score": 0.8,
-      "confidence": 0.56,
-      "expected_change": 0.108,
+      "confidence": 0.4437,
+      "expected_change": 0.0675,
       "expected_horizon_days": 90,
-      "horizon": "6-12 months",
+      "horizon": "1-3 years",
       "rationale": "Balanced momentum and risk profile."
     },
     {
       "instrument_id": "AAPL",
       "name": "AAPL",
       "asset_type": "stock",
-      "score": 0.6751,
-      "quant_score": 0.6945,
+      "score": 0.6494,
+      "quant_score": 0.666,
       "ml_score": 0.5,
-      "risk_score": 0.9,
+      "risk_score": 0.8,
       "momentum_score": 0.6,
-      "confidence": 0.5272,
-      "expected_change": 0.07,
+      "confidence": 0.493,
+      "expected_change": 0.0598,
       "expected_horizon_days": 90,
       "horizon": "6-12 months",
-      "rationale": "Balanced momentum and risk profile."
-    },
-    {
-      "instrument_id": "V",
-      "name": "V",
-      "asset_type": "",
-      "score": 0.6476,
-      "quant_score": 0.664,
-      "ml_score": 0.5,
-      "risk_score": 0.6,
-      "momentum_score": 0.7,
-      "confidence": 0.452,
-      "expected_change": 0.059,
-      "expected_horizon_days": 90,
-      "horizon": "1-3 years",
       "rationale": "Balanced momentum and risk profile."
     },
     {
       "instrument_id": "AMZN",
       "name": "AMZN",
       "asset_type": "stock",
-      "score": 0.5954,
-      "quant_score": 0.606,
+      "score": 0.6413,
+      "quant_score": 0.657,
       "ml_score": 0.5,
-      "risk_score": 0.2,
+      "risk_score": 0.3,
       "momentum_score": 0.9,
-      "confidence": 0.343,
-      "expected_change": 0.0382,
+      "confidence": 0.3885,
+      "expected_change": 0.0565,
       "expected_horizon_days": 90,
       "horizon": "3-10+ years",
       "rationale": "Balanced momentum and risk profile."
     },
     {
-      "instrument_id": "MSFT",
-      "name": "MSFT",
-      "asset_type": "stock",
-      "score": 0.5031,
-      "quant_score": 0.5035,
+      "instrument_id": "V",
+      "name": "V",
+      "asset_type": "",
+      "score": 0.4901,
+      "quant_score": 0.489,
       "ml_score": 0.5,
-      "risk_score": 0.7,
-      "momentum_score": 0.4,
-      "confidence": 0.3917,
-      "expected_change": 0.0013,
+      "risk_score": 0.9,
+      "momentum_score": 0.3,
+      "confidence": 0.4245,
+      "expected_change": -0.004,
       "expected_horizon_days": 90,
       "horizon": "3-6 months",
       "rationale": "Balanced momentum and risk profile."
