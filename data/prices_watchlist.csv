@@ -9,6 +9,17 @@ TSLA,2025-11-04,444.26,alpha_vantage
 JPM,2025-11-04,309.25,alpha_vantage
 V,2025-11-04,340.3,alpha_vantage
 XOM,2025-11-04,114.14,alpha_vantage
+AAPL,2025-11-05,270.14,alpha_vantage
+MSFT,2025-11-05,507.16,alpha_vantage
+AMZN,2025-11-05,250.2,alpha_vantage
+GOOGL,2025-11-05,284.31,alpha_vantage
+META,2025-11-05,635.95,alpha_vantage
+NVDA,2025-11-05,195.21,alpha_vantage
+TSLA,2025-11-05,462.07,alpha_vantage
+JPM,2025-11-05,311.68,alpha_vantage
+V,2025-11-05,340.04,alpha_vantage
+XOM,2025-11-05,113.68,alpha_vantage
+AAPL,2026-04-01,255.63,alpha_vantage
 AAPL,2026-03-31,253.79,alpha_vantage
 AAPL,2026-03-30,246.63,alpha_vantage
 AAPL,2026-03-27,248.8,alpha_vantage
@@ -108,7 +119,7 @@ AAPL,2025-11-11,275.25,alpha_vantage
 AAPL,2025-11-10,269.43,alpha_vantage
 AAPL,2025-11-07,268.47,alpha_vantage
 AAPL,2025-11-06,269.77,alpha_vantage
-AAPL,2025-11-05,270.14,alpha_vantage
+MSFT,2026-04-01,369.37,alpha_vantage
 MSFT,2026-03-31,370.17,alpha_vantage
 MSFT,2026-03-30,358.96,alpha_vantage
 MSFT,2026-03-27,356.77,alpha_vantage
@@ -208,7 +219,7 @@ MSFT,2025-11-11,508.68,alpha_vantage
 MSFT,2025-11-10,506.0,alpha_vantage
 MSFT,2025-11-07,496.82,alpha_vantage
 MSFT,2025-11-06,497.1,alpha_vantage
-MSFT,2025-11-05,507.16,alpha_vantage
+AMZN,2026-04-01,210.57,alpha_vantage
 AMZN,2026-03-31,208.27,alpha_vantage
 AMZN,2026-03-30,200.95,alpha_vantage
 AMZN,2026-03-27,199.34,alpha_vantage
@@ -308,7 +319,7 @@ AMZN,2025-11-11,249.1,alpha_vantage
 AMZN,2025-11-10,248.4,alpha_vantage
 AMZN,2025-11-07,244.41,alpha_vantage
 AMZN,2025-11-06,243.04,alpha_vantage
-AMZN,2025-11-05,250.2,alpha_vantage
+GOOGL,2026-04-01,297.39,alpha_vantage
 GOOGL,2026-03-31,287.56,alpha_vantage
 GOOGL,2026-03-30,273.5,alpha_vantage
 GOOGL,2026-03-27,274.34,alpha_vantage
@@ -408,7 +419,7 @@ GOOGL,2025-11-11,291.31,alpha_vantage
 GOOGL,2025-11-10,290.1,alpha_vantage
 GOOGL,2025-11-07,278.83,alpha_vantage
 GOOGL,2025-11-06,284.75,alpha_vantage
-GOOGL,2025-11-05,284.31,alpha_vantage
+META,2026-04-01,579.23,alpha_vantage
 META,2026-03-31,572.13,alpha_vantage
 META,2026-03-30,536.38,alpha_vantage
 META,2026-03-27,525.72,alpha_vantage
@@ -508,7 +519,7 @@ META,2025-11-11,627.08,alpha_vantage
 META,2025-11-10,631.76,alpha_vantage
 META,2025-11-07,621.71,alpha_vantage
 META,2025-11-06,618.94,alpha_vantage
-META,2025-11-05,635.95,alpha_vantage
+NVDA,2026-04-01,175.75,alpha_vantage
 NVDA,2026-03-31,174.4,alpha_vantage
 NVDA,2026-03-30,165.17,alpha_vantage
 NVDA,2026-03-27,167.52,alpha_vantage
@@ -608,7 +619,7 @@ NVDA,2025-11-11,193.16,alpha_vantage
 NVDA,2025-11-10,199.05,alpha_vantage
 NVDA,2025-11-07,188.15,alpha_vantage
 NVDA,2025-11-06,188.08,alpha_vantage
-NVDA,2025-11-05,195.21,alpha_vantage
+TSLA,2026-04-01,381.26,alpha_vantage
 TSLA,2026-03-31,371.75,alpha_vantage
 TSLA,2026-03-30,355.28,alpha_vantage
 TSLA,2026-03-27,361.83,alpha_vantage
@@ -708,7 +719,7 @@ TSLA,2025-11-11,439.62,alpha_vantage
 TSLA,2025-11-10,445.23,alpha_vantage
 TSLA,2025-11-07,429.52,alpha_vantage
 TSLA,2025-11-06,445.91,alpha_vantage
-TSLA,2025-11-05,462.07,alpha_vantage
+JPM,2026-04-01,295.38,alpha_vantage
 JPM,2026-03-31,294.16,alpha_vantage
 JPM,2026-03-30,283.77,alpha_vantage
 JPM,2026-03-27,282.84,alpha_vantage
@@ -808,7 +819,7 @@ JPM,2025-11-11,315.62,alpha_vantage
 JPM,2025-11-10,316.89,alpha_vantage
 JPM,2025-11-07,314.21,alpha_vantage
 JPM,2025-11-06,313.42,alpha_vantage
-JPM,2025-11-05,311.68,alpha_vantage
+V,2026-04-01,298.51,alpha_vantage
 V,2026-03-31,302.24,alpha_vantage
 V,2026-03-30,299.54,alpha_vantage
 V,2026-03-27,295.52,alpha_vantage
@@ -908,7 +919,7 @@ V,2025-11-11,338.92,alpha_vantage
 V,2025-11-10,334.85,alpha_vantage
 V,2025-11-07,336.02,alpha_vantage
 V,2025-11-06,336.96,alpha_vantage
-V,2025-11-05,340.04,alpha_vantage
+XOM,2026-04-01,160.78,alpha_vantage
 XOM,2026-03-31,169.66,alpha_vantage
 XOM,2026-03-30,171.47,alpha_vantage
 XOM,2026-03-27,170.99,alpha_vantage
@@ -1008,4 +1019,3 @@ XOM,2025-11-11,119.78,alpha_vantage
 XOM,2025-11-10,118.22,alpha_vantage
 XOM,2025-11-07,117.22,alpha_vantage
 XOM,2025-11-06,114.5,alpha_vantage
-XOM,2025-11-05,113.68,alpha_vantage
