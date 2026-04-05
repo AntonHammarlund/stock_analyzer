@@ -1,6 +1,6 @@
 {
   "report_version": 2,
-  "generated_at": "2026-04-04T05:19:58.953137+00:00",
+  "generated_at": "2026-04-05T05:43:29.840367+00:00",
   "top_picks": [
     {
       "instrument_id": "a.us",
@@ -155,7 +155,7 @@
   ],
   "outlook": {
     "daily": "Daily watchlist summary withheld until watchlist prices are refreshed.",
-    "deep": "Deep summary for 2026-04-04: regime appears stable. No major directional shift detected. Long-term investors should stay disciplined and review diversification."
+    "deep": "Deep summary for 2026-04-05: regime appears stable. No major directional shift detected. Long-term investors should stay disciplined and review diversification."
   },
   "portfolio": {
     "risk": "No holdings added yet.",
@@ -166,11 +166,11 @@
     "Remote ML endpoint not configured; using quant-only blend."
   ],
   "run": {
-    "run_id": "beb599f6bdbe4d40a341f5ed2411f192",
+    "run_id": "e007d06eb281422686c01e4db02bc961",
     "status": "success",
-    "started_at": "2026-04-04T05:19:50.373568+00:00",
-    "finished_at": "2026-04-04T05:19:58.952886+00:00",
-    "duration_sec": 8.58,
+    "started_at": "2026-04-05T05:43:21.200085+00:00",
+    "finished_at": "2026-04-05T05:43:29.840108+00:00",
+    "duration_sec": 8.64,
     "execution_host": {
       "id": "local",
       "type": "local",
@@ -198,7 +198,7 @@
     "price_rows": 9944,
     "price_age_days": null,
     "watchlist_count": 10,
-    "watchlist_price_age_days": 2,
+    "watchlist_price_age_days": 3,
     "feature_rows": 4972,
     "quant_rows": 4972,
     "ml_rows": 0,
@@ -213,10 +213,10 @@
     "expected_horizon_days": 90
   },
   "inputs": {
-    "universe_as_of": "2026-04-04",
+    "universe_as_of": "2026-04-05",
     "prices_as_of": "NaT",
     "price_age_days": null,
-    "watchlist_price_age_days": 2,
+    "watchlist_price_age_days": 3,
     "ml": {
       "source": "remote",
       "status": "no-endpoint",
